@@ -1,0 +1,34 @@
+\usepackage{geometry}
+\geometry{
+  left=25mm,
+  right=20mm,
+  top=20mm,
+  bottom=20mm,
+  headheight=14pt
+}
+
+\usepackage{xcolor}
+\definecolor{Primary}{RGB}{0,60,120}    
+\definecolor{Secondary}{RGB}{0,120,150} 
+\definecolor{Accent}{RGB}{255,200,0}    
+\definecolor{Dark}{RGB}{30,30,30}
+
+\newcommand{\Institut}{Institut Supérieur d’Informatique et du Multimédia de Sfax}
+\newcommand{\Departement}{Département Informatique}
+\newcommand{\Titre}{Application Web pour la Gestion des Immobilisations}
+\newcommand{\TitreCourt}{Gestion des Immobilisations}
+\newcommand{\Auteurs}{Mohamed Ali HAMDI}
+\newcommand{\Encadrants}{Encadrant professionnel : M. Issam SOUSSI}
+\newcommand{\Annee}{Année universitaire 2025/2026}
+
+\usepackage{mdframed}
+\usepackage{titlesec}
+
+\titleformat{\chapter}[display]
+  {\bfseries\Large\color{Primary}}
+  {\filright\tiny\bfseries\MakeUppercase{\chaptername}~\thechapter}
+  {1ex}
+  {\titlerule[0.8pt]\vspace{1ex}\filright\scshape}
+  [\vspace{1ex}\titlerule]
+
+\newcommand{\HRule}{\noindent\color{Primary}\rule{\linewidth}{0.8pt}}

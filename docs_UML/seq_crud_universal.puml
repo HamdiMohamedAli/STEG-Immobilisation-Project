@@ -1,0 +1,41 @@
+@startuml
+actor "Responsable" as Resp
+boundary "IHM Gestion / Inventaire" as IHM
+control "Système / Contrôleur" as Sys
+database "Base de Données" as BDD
+
+alt Opération : CRÉATION (Create)
+    Resp -> IHM: Saisir une nouvelle Donnée / Élément (Libellé, Type, Attributs)
+    Resp -> IHM: Valider l'enregistrement
+    IHM -> Sys: creerEntite(libelle, type, attributs)
+    Sys -> BDD: verifierExistence(idEntite)
+    BDD --> Sys: ID disponible
+    Sys -> BDD: Enregistrer dans la table cible (DonneeBrute / Entite)
+    BDD --> Sys: OK (idCible)
+    
+    Sys -> BDD: stockerAuMagasin(idCible, codeBarre, quantite)
+    BDD --> Sys: OK
+    Sys -> BDD: JournalLog.enregistrerTrace("Création et Stockage Entité")
+    Sys --> IHM: Élément enregistré et disponible
+    IHM --> Resp: Afficher l'élément dans la liste et le catalogue
+
+alt Opération : MODIFICATION (Update)
+    Resp -> IHM: Sélectionner un élément et modifier ses informations
+    Resp -> IHM: Valider les modifications
+    IHM -> Sys: modifierEntite(idCible, nouveauxAttributs)
+    Sys -> BDD: majDonneesEntite(idCible)
+    BDD --> Sys: OK
+    Sys -> BDD: JournalLog.enregistrerTrace("Modification Entité")
+    Sys --> IHM: Succès de la mise à jour
+
+else Opération : SUPPRESSION (Delete)
+    Resp -> IHM: Sélectionner un élément et cliquer sur "Supprimer"
+    IHM -> Sys: supprimerEntite(idCible)
+    Sys -> BDD: detruireEntite(idCible)
+    BDD --> Sys: OK
+    Sys -> BDD: JournalLog.enregistrerTrace("Suppression Entité")
+    Sys --> IHM: Succès de la suppression
+end
+
+IHM --> Resp: Rafraîchir l'interface graphique avec la liste à jour
+@enduml

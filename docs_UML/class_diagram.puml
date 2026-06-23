@@ -1,0 +1,144 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+class Profil {
+    - idProfil : int
+    - labelProfil : string
+}
+
+class Utilisateur {
+    - idUtilisateur : int
+    - nom : string
+    - email : string
+    - tel : string
+    - motDePasse : string
+    + seConnecter() : boolean
+    + declarerPanne() : void
+    + genererRapportPDF() : void
+}
+
+class Admin {
+    + gererUtilisateurs() : boolean
+    + gererProfils() : boolean
+}
+
+class ChefCentre {
+    + visualiserToutPlan() : void
+}
+
+class ResponsableServices {
+    + gererLocaux() : boolean
+    + dragDropLocal() : void
+}
+
+class ResponsableEquip {
+    + gererImmobilisations() : boolean
+    + gererEquipements() : boolean
+    + dragDropImmo() : void
+    + dragDropEquip() : void
+}
+
+class GestionnaireVoitures {
+    + gererVoitures() : boolean
+    + dragDropVoiture() : void
+}
+
+class AgentLocal {
+    + visualiserModifierPlanLocal() : void
+}
+
+Utilisateur <|-- Admin
+Utilisateur <|-- AgentLocal
+Utilisateur <|-- ChefCentre
+
+ChefCentre <|-- ResponsableServices
+ChefCentre <|-- ResponsableEquip
+ChefCentre <|-- GestionnaireVoitures
+
+Utilisateur "1" --> "1" Profil : possède >
+
+class JournalLog {
+    - idLog : int
+    - action : string
+    - typeAction : string
+    - cibleEntite : string
+    - idCible : string
+    - dateAction : datetime
+    + enregistrerTrace() : void
+}
+
+Utilisateur "1" --> "*" JournalLog : génère >
+
+class PlanCentre {
+    - idPlan : int
+    - versionPlan : string
+    - dateCreation : date
+    + enregistrerPlan() : boolean
+}
+
+class ElementPlan {
+    - idElement : int
+    - xPlan : int
+    - yPlan : int
+    - orientation : int
+    + deplacerElement(x: int, y: int) : void
+}
+
+PlanCentre "1" *-- "*" ElementPlan : contient >
+
+class DonneeBrute {
+    - idDonnee : int
+    - libelle : string
+    - type : string
+}
+
+class Equipement {
+}
+
+class Immobilisation {
+}
+
+DonneeBrute <|-- Equipement
+DonneeBrute <|-- Immobilisation
+
+class Magasin {
+    - idItem : int
+    - codeBarre: string
+    - quantiteDispo : int
+}
+
+DonneeBrute "1" --> "0..*" Magasin : est enregistré dans >
+
+class Local {
+    - idLocal : string
+    - typeLocal : string
+    - labelLocal : string
+    - superficie : float
+}
+
+AgentLocal "0..*" --> "1" Local : est assigné à >
+
+ElementPlan "0..1" --> "1" Local : positionne >
+ElementPlan "0..1" --> "1" Magasin : instancie sur le plan >
+
+class Voiture {
+    - matricule : string
+    - marque : string
+    - modele : string
+    - statut : string
+}
+
+ElementPlan "0..1" --> "1" Voiture : positionne >
+
+class Panne {
+    - idPanne : int
+    - description : string
+    - dateDeclaration : date
+    - gravite : string
+    + notifierResponsables() : void
+}
+
+Panne "*" --> "1" Utilisateur : déclarée par >
+Panne "*" --> "0..1" Equipement : concerne >
+Panne "*" --> "0..1" Voiture : concerne >
+@enduml

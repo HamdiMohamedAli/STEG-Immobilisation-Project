@@ -1,0 +1,72 @@
+\chapter{Réalisation et Implémentation}
+
+\section{Introduction}
+
+Ce chapitre est dédié à la concrétisation matérielle et logicielle du système de gestion des immobilisations. Après avoir validé les phases d'analyse et de conception, la phase de réalisation permet de traduire les modèles théoriques en composants applicatifs fonctionnels. L'étude aborde l'architecture logicielle globale retenue pour structurer le code source, détaille l'organisation de la base de données relationnelle, puis présente les principales interfaces graphiques développées afin d'illustrer la prise en main et le comportement opérationnel de l'application.
+
+\section{Architecture Globale de l'Application}
+
+Pour garantir la maintenabilité, la sécurité et l'évolutivité du système, le développement s'est appuyé sur une architecture modulaire et une séparation stricte des responsabilités. Le traitement des requêtes s'effectue via une logique serveur robuste en PHP qui interagit de manière sécurisée avec le système de gestion de base de données MySQL. L'interface utilisateur repose sur une intégration fluide des technologies web standards, permettant un rendu dynamique des données, une validation des formulaires côté client et une navigation fluide entre les différents modules sans rechargement lourd des pages, optimisant ainsi l'expérience d'utilisation des agents de la structure.
+
+\section{Implémentation de la Base de Données}
+
+La structure physique des données a été déployée sur le serveur local conformément aux spécifications du diagramme de classes. Les tables ont été optimisées avec des clés primaires et secondaires appropriées afin de garantir l'intégrité référentielle, notamment pour l'arborescence des locaux, les affectations des véhicules et le suivi du matériel électrique. L'administration et la vérification de la cohérence des enregistrements ont été assurées de manière centralisée, validant la persévérance et la sécurité des données applicatives.
+
+\section{Présentation des Interfaces Graphiques}
+
+L'interface graphique a été conçue pour offrir une navigation moderne, sobre et intuitive, adaptée aux besoins quotidiens des différents profils d'utilisateurs de la société.
+
+\subsection{Interface d'Authentification}
+
+L'accès à l'application est protégé par une page de connexion sécurisée qui constitue la porte d'entrée unique du système. Cette interface filtre les accès en vérifiant les identifiants saisis dans la table des utilisateurs afin de rediriger chaque agent vers son espace de travail personnalisé.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\textwidth]{../../assets/logoISIMS.png}
+  \caption{Interface d'authentification sécurisée}
+  \label{fig:login_page}
+\end{figure}
+
+\subsection{Tableau de Bord Principal}
+
+Une fois l'authentification validée, le système affiche un tableau de bord centralisé qui offre une vue d'ensemble sur l'état du patrimoine. Cette page présente des indicateurs de synthèse sur le volume des immobilisations, la répartition des véhicules et les alertes d'inventaire en cours.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\textwidth]{../../assets/logoISIMS.png}
+  \caption{Tableau de bord de l'application}
+  \label{fig:dashboard}
+\end{figure}
+
+\subsection{Module de Gestion des Locaux et du Patrimoine}
+
+Cette interface permet de piloter la cartographie physique de la direction. Elle offre des formulaires de saisie et des tableaux de consultation interactifs pour recenser les structures, les directions, les rez-de-chaussée ainsi que les pièces de manière hiérarchique.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\textwidth]{../../assets/logoISIMS.png}
+  \caption{Interface de suivi des locaux et structures}
+  \label{fig:gestion_locaux}
+\end{figure}
+
+\subsection{Module de Suivi du Matériel Électrique}
+
+Dédiée à la traçabilité des équipements techniques, cette vue permet d'enregistrer le matériel électrique, de modifier son état opérationnel et de mettre à jour sa localisation exacte d'un local à un autre, tout en conservant un historique fiable des mouvements.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\textwidth]{../../assets/logoISIMS.png}
+  \caption{Interface de gestion du matériel électrique}
+  \label{fig:gestion_equipements}
+\end{figure}
+
+\subsection{Module de Gestion du Parc Automobile}
+
+Cette section de l'application centralise l'ensemble des informations relatives à la flotte de véhicules de la société. Elle permet le suivi des fiches techniques des voitures, de leur état général ainsi que de leurs directions d'affectation respectives.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\textwidth]{../../assets/logoISIMS.png}
+  \caption{Interface de suivi du parc roulant}
+  \label{fig:gestion_vehicules}
+\end{figure}

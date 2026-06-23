@@ -1,0 +1,26 @@
+@startuml
+actor Utilisateur
+boundary "IHM Pannes" as IHM
+control "Système / Contrôleur" as Sys
+database "Base de Données" as BDD
+actor "Responsable Concerné" as Resp
+
+Utilisateur -> IHM: Sélectionner l'élément en panne (Voiture ou Equipement)
+Utilisateur -> IHM: Saisir la description et la gravité de la panne
+Utilisateur -> IHM: Cliquer sur "Déclarer la panne"
+IHM -> Sys: declarerPanne(idUtilisateur, idCible, description, gravite)
+
+Sys -> BDD: insererPanne(idPanne, description, date, gravite, idCible)
+BDD --> Sys: Confirmation enregistrement
+Sys -> Sys: notifierResponsables()
+
+alt Si cible = Equipement
+    Sys -> Resp: Envoyer alerte au Responsable Équipements
+else Si cible = Voiture
+    Sys -> Resp: Envoyer alerte au Gestionnaire de Voitures
+end
+
+Sys -> BDD: JournalLog.enregistrerTrace("Déclaration Panne")
+Sys --> IHM: Panne signalée avec succès
+IHM --> Utilisateur: Afficher confirmation d'envoi
+@enduml

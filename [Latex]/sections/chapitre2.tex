@@ -1,0 +1,79 @@
+\chapter{Analyse des Exigences}
+
+\section{Introduction}
+
+Ce chapitre est dédié à l'analyse approfondie des besoins et des spécifications techniques indispensables à la conception du système de gestion. Cette phase préliminaire permet de cerner précisément le périmètre d'application du projet en identifiant l'ensemble des acteurs appelés à interagir avec la plateforme. La formalisation des exigences se structure autour de deux axes complémentaires : d'une part, la description des fonctionnalités opérationnelles attendues par la structure, et d'autre part, la définition des critères de qualité, de sécurité et de performance indispensables à la viabilité de la solution. Enfin, une présentation détaillée de l'écosystème technologique retenu vient compléter cette étude afin de poser les fondations techniques du développement futur.
+
+\section{Identification des Acteurs}
+
+Le système distingue plusieurs profils d'utilisateurs, chacun disposant de droits d'accès spécifiques adaptés à la gestion et au suivi du patrimoine de la société :
+
+\begin{itemize}[label=$\bullet$]
+   \item \textbf{Administrateur :} Prise en charge de la gestion globale du système, de la configuration des paramètres généraux et du contrôle des accès utilisateurs.
+   \item \textbf{Chef du Centre Informatique :} Supervision d'ensemble des actifs technologiques, validation des inventaires et génération des rapports de synthèse.
+   \item \textbf{Responsable de Services :} Suivi des affectations, coordination des inventaires périodiques et validation des mouvements internes au niveau des différents services.
+   \item \textbf{Responsable Équipements :} Gestion du cycle de vie du matériel technique, de son enregistrement initial jusqu'à sa mise au rebut.
+   \item \textbf{Gestionnaire de Voitures :} Suivi spécifique du parc roulant, incluant l'état de la flotte automobile, les affectations et la maintenance des véhicules.
+   \item \textbf{Agent de Local :} Gestion et suivi des immobilisations affectées aux espaces physiques, bureaux et structures de la direction.
+\end{itemize}
+
+\section{Exigences Fonctionnelles}
+
+Le système s'articule autour de plusieurs modules fonctionnels interconnectés permettant d'assurer la traçabilité complète et la gestion du cycle de vie du patrimoine de la structure.
+
+Le premier module concerne la gestion des accès et de la sécurité. Le système doit garantir une authentification sécurisée pour chaque profil utilisateur. L'attribution des droits d'accès s'effectue de manière stricte, limitant la visibilité et les actions possibles sur l'application en fonction du rôle attribué à chaque agent lors de la configuration de son compte.
+
+Le cœur de l'application repose sur le module de gestion du patrimoine physique et des locaux. Ce composant assure le recensement, la classification et le suivi rigoureux des structures, des directions, des rez-de-chaussée ainsi que de chaque localité physique. Chaque espace est répertorié avec ses caractéristiques structurelles afin de servir de point d'ancrage aux immobilisations.
+
+Le module de gestion du matériel électrique et technique permet l'enregistrement complet de chaque équipement. Le système prend en charge le suivi de l'état opérationnel, la localisation exacte dans les différents bâtiments et l'affectation aux différents services. Il conserve l'historique complet des mouvements et des changements d'état pour chaque immobilisation technique.
+
+Le volet relatif au parc roulant est pris en charge par le module de gestion des véhicules. Ce bloc fonctionnel assure le suivi de la flotte automobile de la société, l'enregistrement des spécificités techniques de chaque véhicule, ainsi que le contrôle des affectations par direction et par utilisateur responsable.
+
+Enfin, un module dédié à l'inventaire et aux bilans offre des fonctionnalités de synthèse. Le système permet l'édition d'états d'inventaire périodiques par local ou par nature de matériel, facilitant ainsi les opérations de contrôle physique, la détection des anomalies de placement et la prise de décision concernant la mise au rebut ou le renouvellement des actifs.
+
+\section{Exigences Non Fonctionnelles}
+
+Les exigences non fonctionnelles définissent les critères de qualité, de performance et de contraintes techniques indispensables pour garantir la viabilité et l'efficacité opérationnelle du système.
+
+La sécurité constitue un pilier fondamental de l'application. Le système doit assurer une protection rigoureuse des données relatives au patrimoine de la société à travers un chiffrement des mots de passe et des communications. Le contrôle des sessions doit empêcher toute interception ou accès non autorisé, garantissant que chaque utilisateur évolue exclusivement dans la limite des droits liés à son profil.
+
+La performance et la disponibilité de la plateforme sont essentielles pour soutenir le travail quotidien des équipes. L'application doit afficher des temps de réponse optimaux lors de l'exécution des requêtes de recherche ou de la génération des états d'inventaire, même en période de forte sollicitation. Une architecture stable doit maximiser le taux de disponibilité afin de permettre un accès continu aux informations du parc d'immobilisations.
+
+\section{Environnement de Travail Logiciel}
+
+Les technologies et outils logiciels suivants ont été employés pour la réalisation de ce projet :
+
+\begin{itemize}[label=$\bullet$]
+   \item \textbf{Langages Web (Front-end) :}
+   \begin{itemize}[label=$\circ$]
+     \item \textbf{HTML5 :} Permet de structurer le contenu et de définir l'architecture des pages web.
+     \item \textbf{CSS3 :} Assure la mise en forme, le design et le rendu visuel de l'interface utilisateur.
+     \item \textbf{JavaScript :} Apporte de la dynamisation et de l'interactivité aux éléments des pages web.
+   \end{itemize}
+   
+   \item \textbf{Langage côté serveur (Back-end) :}
+   \begin{itemize}[label=$\circ$]
+     \item \textbf{PHP :} Gère la logique applicative, le traitement des requêtes et la communication avec le serveur.
+   \end{itemize}
+   
+   \item \textbf{Gestion de données :}
+   \begin{itemize}[label=$\circ$]
+     \item \textbf{MySQL :} Système de gestion de base de données relationnelle utilisé pour stocker et organiser les informations de manière sécurisée.
+     \item \textbf{phpMyAdmin :} Interface graphique Web qui simplifie l'administration et la manipulation des bases de données MySQL.
+   \end{itemize}
+   
+   \item \textbf{Serveur local :}
+   \begin{itemize}[label=$\circ$]
+     \item \textbf{XAMPP :} Environnement de développement local complet et multiplateforme, incluant Apache, MariaDB et PHP, assurant la gestion des services nécessaires au fonctionnement du serveur web.
+   \end{itemize}
+   
+   \item \textbf{Éditeur de code :}
+   \begin{itemize}[label=$\circ$]
+     \item \textbf{Visual Studio Code :} Environnement de développement léger et extensible, utilisé pour l'écriture et le débogage du code source.
+   \end{itemize}
+   
+   \item \textbf{Conception des diagrammes :}
+   \begin{itemize}[label=$\circ$]
+     \item \textbf{PlantUML :} Serveur en ligne permettant de modéliser et de générer les diagrammes UML de manière programmable et structurée.
+   \end{itemize}
+\end{itemize}

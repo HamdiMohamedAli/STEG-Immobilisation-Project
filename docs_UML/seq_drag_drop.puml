@@ -1,0 +1,34 @@
+@startuml
+actor "Utilisateur (Responsable / Agent)" as Acteur
+boundary "IHM Plan Interactif" as IHM
+control "Système / Contrôleur" as Sys
+database "Base de Données" as BDD
+
+Acteur -> IHM: Glisser et déposer (Drag & Drop) un élément sur le plan à la coordonnée (X, Y)
+IHM -> Sys: positionnerElement(idUtilisateur, idElement, x, y, idLocal)
+
+alt L'acteur connecté est un Agent de Local
+    Sys -> BDD: verifierAssignationLocal(idUtilisateur, idLocal)
+    BDD --> Sys: Statut assignation (Vrai/Faux)
+    
+    alt Pas d'assignation ou local différent
+        Sys --> IHM: Erreur : Modification interdite en dehors de votre zone assignée
+        IHM --> Acteur: Afficher un message d'accès refusé (Action annulée)
+    else Assignation valide
+        Sys -> Sys: Instancier / Mettre à jour l'ElementPlan
+        Sys -> BDD: sauvegarderPositionElement(idElement, x, y, idLocal)
+        BDD --> Sys: OK
+        Sys -> BDD: JournalLog.enregistrerTrace("Positionnement Agent - Succès")
+        Sys --> IHM: Mise à jour graphique confirmée
+        IHM --> Acteur: Afficher l'élément repositionné sur votre plan
+    end
+
+else L'acteur connecté est un Responsable Métier (Privilèges élevés)
+    Sys -> Sys: Instancier / Mettre à jour l'ElementPlan
+    Sys -> BDD: sauvegarderPositionElement(idElement, x, y, idLocal)
+    BDD --> Sys: OK
+    Sys -> BDD: JournalLog.enregistrerTrace("Positionnement Responsable - Succès")
+    Sys --> IHM: Mise à jour graphique confirmée
+    IHM --> Acteur: Afficher l'élément repositionné sur le plan général
+end
+@enduml

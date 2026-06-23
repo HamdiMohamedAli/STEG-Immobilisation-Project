@@ -1,0 +1,22 @@
+@startuml
+actor Utilisateur
+boundary "IHM Authentification" as IHM
+control "Système / Contrôleur" as Sys
+database "Base de Données" as BDD
+
+Utilisateur -> IHM: Saisir identifiant (4 chiffres) et mot de passe (4 chiffres)
+Utilisateur -> IHM: Cliquer sur "Se connecter"
+IHM -> Sys: verifierIdentifiants(id, mdp)
+Sys -> BDD: requeteUtilisateur(id)
+BDD --> Sys: Retourner les données + Profil
+Sys -> Sys: Vérifier le mot de passe (hash)
+
+alt Identifiants Corrects
+    Sys -> BDD: JournalLog.enregistrerTrace("Connexion")
+    Sys --> IHM: Authentification validée (Retourner profil)
+    IHM --> Utilisateur: Afficher l'espace de travail correspondant au profil
+else Identifiants Incorrects
+    Sys --> IHM: Échec d'authentification
+    IHM --> Utilisateur: Afficher un message d'erreur
+end
+@enduml

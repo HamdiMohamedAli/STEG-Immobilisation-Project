@@ -1,0 +1,24 @@
+@startuml
+actor Utilisateur
+boundary "IHM Plan" as IHM
+control "Système / Contrôleur" as Sys
+database "Base de Données" as BDD
+
+Utilisateur -> IHM: Accéder à l'espace de cartographie
+IHM -> Sys: Demande d'affichage du plan (idUtilisateur, profilId)
+
+alt Profil : Chef du Centre ou Responsables Métiers (Vue Globale)
+    Sys -> BDD: recupererTousLesElementsPlan()
+    BDD --> Sys: Liste complète de tous les ElementsPlan + Locaux
+    Sys --> IHM: Transmettre les données de l'infrastructure globale
+    IHM --> Utilisateur: Effectuer le rendu visuel de TOUT le plan du centre
+
+else Profil : Agent de Local (Vue Restreinte)
+    Sys -> BDD: recupererLocalAssigne(idUtilisateur)
+    BDD --> Sys: Retourner l'idLocal assigné à l'agent
+    Sys -> BDD: recupererElementsPlanParLocal(idLocal)
+    BDD --> Sys: Liste filtrée des ElementsPlan du local restreint
+    Sys --> IHM: Transmettre les données du local assigné uniquement
+    IHM --> Utilisateur: Effectuer le rendu visuel du local de l'agent
+end
+@enduml

@@ -1,0 +1,76 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+
+actor "Personnel STEG" as User
+actor "Administrateur" as Admin
+actor "Chef du Centre Informatique" as ChefCentre
+actor "Responsable de Services" as RespServ
+actor "Responsable Équipements" as RespEquip
+actor "Gestionnaire de Voitures" as GestVoit
+actor "Agent de Local" as Agent
+
+User <|-- Admin
+User <|-- Agent
+User <|-- ChefCentre
+
+ChefCentre <|-- RespServ
+ChefCentre <|-- RespEquip
+ChefCentre <|-- GestVoit
+
+rectangle "STEG - Gestion des Immobilisations" {
+    usecase "S'authentifier par profil" as UC_Auth
+    usecase "Gérer les utilisateurs & profils" as UC_Admin_System
+    
+    package "Gestion du Plan" {
+        usecase "Visualiser TOUT le plan du centre" as UC_Voir_Tout_Plan
+    }
+
+    package "Gestion des Locaux" {
+        usecase "Gérer tous les locaux (CRUD)" as UC_CRUD_Locaux
+        usecase "Placer/Modifier les locaux (Drag & Drop)" as UC_DragDrop_Locaux
+    }
+    
+    package "Gestion des Immobilisations & Équipements" {
+        usecase "Gérer toutes les immobilisations (CRUD)" as UC_CRUD_Immo
+        usecase "Placer/Modifier les immobilisations (Drag & Drop)" as UC_DragDrop_Immo
+        usecase "Gérer tous les équipements (CRUD)" as UC_CRUD_Equip
+        usecase "Placer/Modifier les équipements (Drag & Drop)" as UC_DragDrop_Equip
+    }
+
+    package "Gestion des Voitures" {
+        usecase "Gérer toutes les voitures (CRUD)" as UC_CRUD_Voiture
+        usecase "Placer/Modifier les voitures (Drag & Drop)" as UC_DragDrop_Voiture
+    }
+    
+    package "Espace Agent" {
+        usecase "Visualiser & modifier le plan de son local assigné" as UC_Voir_Local_Agent
+    }
+    
+    package "Fonctionnalités Transverses" {
+        usecase "Générer les rapports PDF" as UC_PDF
+        usecase "Gérer et envoyer les alertes pannes" as UC_Alertes
+    }
+}
+
+User --> UC_Auth
+User --> UC_Alertes
+User --> UC_PDF
+
+Admin --> UC_Admin_System
+
+ChefCentre --> UC_Voir_Tout_Plan
+
+RespServ --> UC_CRUD_Locaux
+RespServ --> UC_DragDrop_Locaux
+
+RespEquip --> UC_CRUD_Immo
+RespEquip --> UC_DragDrop_Immo
+RespEquip --> UC_CRUD_Equip
+RespEquip --> UC_DragDrop_Equip
+
+GestVoit --> UC_CRUD_Voiture
+GestVoit --> UC_DragDrop_Voiture
+
+Agent --> UC_Voir_Local_Agent
+@enduml

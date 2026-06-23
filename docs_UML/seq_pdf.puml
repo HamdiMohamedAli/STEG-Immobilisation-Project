@@ -1,0 +1,18 @@
+@startuml
+actor Utilisateur
+boundary "IHM (Pages Multiples / Bouton Imprimer)" as IHM
+control "Système / Contrôleur" as Sys
+database "Base de Données" as BDD
+
+Utilisateur -> IHM: Cliquer sur le bouton "Imprimer / Générer PDF" depuis la page courante
+IHM -> Sys: genererRapportPDF(contextPage, idUtilisateur)
+
+Sys -> BDD: recupererDonneesContexte(contextPage)
+BDD --> Sys: Données brutes de la page (Pannes, Équipements, Véhicules, Locaux)
+
+Sys -> Sys: Compiler et formater dynamiquement les données au format PDF
+Sys -> BDD: JournalLog.enregistrerTrace("Impression PDF - Page: " + contextPage)
+
+Sys --> IHM: Transmettre le flux du fichier PDF généré
+IHM --> Utilisateur: Lancer le téléchargement automatique ou ouvrir l'aperçu avant impression
+@enduml

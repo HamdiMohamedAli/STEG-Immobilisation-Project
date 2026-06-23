@@ -1,0 +1,87 @@
+\documentclass[12pt,a4paper]{report}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+
+\usepackage{newtxtext}
+\usepackage{newtxmath}
+
+\usepackage{lettrine}
+\usepackage{float}
+\usepackage{fancyhdr}
+\usepackage{array}
+\usepackage{setspace}
+\onehalfspacing
+\usepackage{graphicx}
+\usepackage{xcolor}
+
+\usepackage{hyperref}
+\usepackage[all]{hypcap}
+\usepackage{csquotes}
+
+\usepackage[none]{hyphenat}
+\usepackage{enumitem}
+
+\input{../style/style.tex}
+
+\hypersetup{colorlinks=true,linkcolor=Primary,urlcolor=Primary,citecolor=Primary}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small \nouppercase{\leftmark}}
+\fancyhead[R]{}
+\fancyfoot[C]{\thepage}
+
+\usepackage[backend=biber,style=ieee]{biblatex}
+\addbibresource{references.bib}
+
+\makeatletter
+\newcommand{\emptypage}[1]{%
+  \cleardoublepage
+  \begingroup
+  \let\ps@plain\ps@empty
+  \pagestyle{empty}
+  #1
+  \cleardoublepage
+  \endgroup
+}
+\makeatother
+
+\begin{document}
+
+\pagenumbering{arabic}
+
+\begin{titlepage}
+  \input{../sections/title}
+\end{titlepage}
+
+\clearpage
+\thispagestyle{empty}
+\input{../sections/remerciements.tex}
+
+\clearpage
+\tableofcontents
+
+\clearpage
+\listoffigures
+
+\clearpage
+\input{../sections/introduction.tex}
+
+\clearpage
+\input{../sections/chapitre1.tex}
+
+\clearpage
+\input{../sections/chapitre2.tex}
+
+\clearpage
+\input{../sections/chapitre3.tex}
+
+\clearpage
+\input{../sections/chapitre4.tex}
+
+\clearpage
+\input{../sections/conclusion.tex}
+
+\end{document}

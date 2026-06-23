@@ -1,0 +1,41 @@
+@startuml
+actor Administrateur as Admin
+boundary "IHM Gestion Utilisateurs" as IHM
+control "Système / Contrôleur" as Sys
+database "Base de Données" as BDD
+
+alt Création d'un utilisateur
+    Admin -> IHM: Saisir les informations (ID 4 chiffres, nom, email, tel, profilId)
+    Admin -> IHM: Cliquer sur "Enregistrer"
+    IHM -> Sys: creerUtilisateur(idUtilisateur, nom, email, tel, profilId)
+    Sys -> BDD: verifierExistenceUtilisateur(idUtilisateur)
+    BDD --> Sys: ID disponible
+    Sys -> BDD: insererUtilisateur(...)
+    BDD --> Sys: Confirmation insertion
+    Sys -> BDD: JournalLog.enregistrerTrace("Création Utilisateur")
+    Sys --> IHM: Succès de l'enregistrement
+
+alt Modification d'un utilisateur
+    Admin -> IHM: Sélectionner un utilisateur et modifier ses données
+    Admin -> IHM: Cliquer sur "Modifier"
+    IHM -> Sys: modifierUtilisateur(idUtilisateur, nom, email, tel, profilId)
+    Sys -> BDD: verifierExistenceUtilisateur(idUtilisateur)
+    BDD --> Sys: ID existant
+    Sys -> BDD: majUtilisateur(...)
+    BDD --> Sys: Confirmation mise à jour
+    Sys -> BDD: JournalLog.enregistrerTrace("Modification Utilisateur")
+    Sys --> IHM: Succès de la modification
+
+else Suppression d'un utilisateur
+    Admin -> IHM: Sélectionner un utilisateur et cliquer sur "Supprimer"
+    IHM -> Sys: supprimerUtilisateur(idUtilisateur)
+    Sys -> BDD: verifierExistenceUtilisateur(idUtilisateur)
+    BDD --> Sys: ID existant
+    Sys -> BDD: detruireUtilisateur(idUtilisateur)
+    BDD --> Sys: Confirmation suppression
+    Sys -> BDD: JournalLog.enregistrerTrace("Suppression Utilisateur")
+    Sys --> IHM: Succès de la suppression
+end
+
+IHM --> Admin: Rafraîchir et afficher la liste à jour des utilisateurs
+@enduml
