@@ -1,14 +1,22 @@
-const allowedProfilsForLocaux = [1, 2, 3];
-const currentFloor = "<?= htmlspecialchars($floor) ?>";
-const canMergeCells = "<?= $canMergeCells ? 'true' : 'false' ?>";
-
 document.addEventListener('DOMContentLoaded', () => {
+    window.allowedProfilsForLocaux = [1, 2, 3];
+    
     initPrintButton();
-    initGridGestures();
+    
+    const isPlanPage = document.getElementById('gridStage') !== null;
+    const isUmlPage = document.getElementById('uml-display-image') !== null;
 
-    // ==========================================
-    // INITIALISATION ET FILTRES DU CATALOGUE (plan.php)
-    // ==========================================
+    if (isPlanPage) {
+        initGridGestures();
+        initPlanCatalog();
+    }
+
+    if (isUmlPage) {
+        initUmlFeatures();
+    }
+});
+
+function initPlanCatalog() {
     const typeField = document.getElementById('typeEntite');
     const currentId = document.getElementById('idCible');
     const searchInput = document.getElementById('search-material');
@@ -32,9 +40,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (catalogSearch) catalogSearch.addEventListener('input', applyCatalogFilters);
     if (typeLocalFilter) typeLocalFilter.addEventListener('change', applyCatalogFilters);
 
-    // ==========================================
-    // LOGIQUE DE GLISSER-DÉPOSER DES ÉLÉMENTS (plan.php)
-    // ==========================================
     const dragItems = document.querySelectorAll('.drag-item');
     dragItems.forEach(item => {
         item.addEventListener('dragstart', function(e) {
@@ -81,7 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const data = JSON.parse(e.dataTransfer.getData('text/plain'));
 
-                if (data.type === 'Local' && !allowedProfilsForLocaux.includes(Number(window.currentUserProfilId))) {
+                if (data.type === 'Local' && (!window.allowedProfilsForLocaux || !window.allowedProfilsForLocaux.includes(Number(window.currentUserProfilId)))) {
                     showToast("Action refusée : Votre profil ne vous permet pas de placement de locaux.", true);
                     return;
                 }
@@ -93,7 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 formData.append('action_position', '1');
                 formData.append('col_idx', colIdx);
                 formData.append('row_idx', rowIdx);
-                formData.append('current_floor', currentFloor);
+                formData.append('current_floor', typeof currentFloor !== 'undefined' ? currentFloor : 'rc');
                 
                 if (data.type === 'Local') {
                     formData.append('id_local', data.id);
@@ -114,13 +119,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (frontContent) {
                             frontContent.innerHTML = `
                                 <div class="placed-element type-${data.type}" data-placed-id="${data.id}" data-placed-type="${data.type}">
-                                    ${data.label}
-                                    <button type="button" class="delete-item-trigger" title="Supprimer l'objet">
-                                        <i class="fa-solid fa-trash"></i>
-                                    </button>
+                                    <span>${data.label}</span>
                                 </div>
                             `;
-                            attachDeleteEvent(frontContent.querySelector('.delete-item-trigger'));
                         }
                         
                         const stockBadge = document.querySelector(`.badge-stock[data-stock-id="${data.id}"]`);
@@ -148,14 +149,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // ==========================================
-        // GESTION DU CLIC : SÉLECTION OU FUSION CELLS (plan.php)
-        // ==========================================
         cell.addEventListener('click', function(e) {
-            if (e.target.closest('.delete-item-trigger')) return;
-
             if (!isMergeMode && !isUnmergeMode) {
-                this.classList.toggle('selected-layer');
+                if (this.querySelector('.placed-element')) {
+                    this.classList.toggle('selected-layer');
+                }
             } else if (isMergeMode) {
                 if (this.querySelector('.placed-element')) {
                     showToast("Impossible de fusionner une cellule contenant un objet !", true);
@@ -191,8 +189,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
-
-    document.querySelectorAll('.delete-item-trigger').forEach(btn => attachDeleteEvent(btn));
 
     if (btnMergeCells) {
         btnMergeCells.addEventListener('click', function() {
@@ -234,66 +230,64 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ==========================================
-    // LOGIQUE EXCLUSIVE À LA PAGE : uml.php
-    // ==========================================
-    const displayImage = document.getElementById('uml-display-image');
-    if (displayImage) {
-        const links = document.querySelectorAll('.uml-link');
-        const zoomContainer = document.getElementById('zoom-container');
-        const viewport = document.getElementById('viewport');
-        const btnIn = document.getElementById('zoom-in');
-        const btnOut = document.getElementById('zoom-out');
-        const btnReset = document.getElementById('zoom-reset');
-
-        let umlScale = 1;
-        let translateUmlX = 0;
-        let translateUmlY = 0;
-
-        function updateUmlTransform() {
-            if(zoomContainer) {
-                zoomContainer.style.transform = `translate(${translateUmlX}px, ${translateUmlY}px) scale(${umlScale})`;
+    const deleteBtn = document.getElementById('deleteSelectedBtn');
+    if (deleteBtn) {
+        deleteBtn.addEventListener('click', function () {
+            const selectedItems = document.querySelectorAll('.grid-item.selected-layer');
+            
+            if (selectedItems.length === 0) {
+                alert("Veuillez d'abord cliquer sur un ou plusieurs éléments de la grille pour les sélectionner.");
+                return;
             }
-        }
 
-        function resetUmlView() {
-            umlScale = 1; translateUmlX = 0; translateUmlY = 0;
-            if(zoomContainer) {
-                zoomContainer.style.transition = 'none'; 
-                updateUmlTransform();
-                setTimeout(() => { zoomContainer.style.transition = 'transform 0.15s ease-out'; }, 50);
+            if (confirm(`Voulez-vous vraiment supprimer les ${selectedItems.length} élément(s) sélectionné(s) ?`)) {
+                const urlParams = new URLSearchParams(window.location.search);
+                const backendFloor = urlParams.get('floor') || 'rc';
+
+                selectedItems.forEach(item => {
+                    const row = item.getAttribute('data-row');
+                    const col = item.getAttribute('data-col');
+
+                    const formData = new FormData();
+                    formData.append('action_delete_item', '1');
+                    formData.append('row_idx', row);
+                    formData.append('col_idx', col);
+                    formData.append('current_floor', backendFloor);
+
+                    fetch(window.location.href, {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            const contentDiv = item.querySelector('.front-cell-content');
+                            if (contentDiv) {
+                                contentDiv.innerHTML = ''; 
+                            }
+                            item.classList.remove('selected-layer');
+                            showToast("Sélection supprimée.");
+                        } else {
+                            alert("Erreur : " + data.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Erreur lors de la suppression :', error);
+                    });
+                });
             }
-        }
-
-        links.forEach(link => {
-            link.addEventListener('click', function (e) {
-                e.preventDefault();
-                links.forEach(l => l.classList.remove('active'));
-                this.classList.add('active');
-                displayImage.src = this.getAttribute('href');
-                displayImage.onload = () => resetUmlView();
-            });
         });
-
-        if (btnIn) btnIn.addEventListener('click', () => { umlScale = Math.min(4, umlScale + 0.2); updateUmlTransform(); });
-        if (btnOut) btnOut.addEventListener('click', () => { umlScale = Math.max(0.4, umlScale - 0.2); updateUmlTransform(); });
-        if (btnReset) btnReset.addEventListener('click', resetUmlView);
     }
-});
+}
 
-// ==========================================
-// NAVIGATION PAN & ZOOM DU PLAN EXCLUSIF (plan.php)
-// ==========================================
 function initGridGestures() {
     const stage = document.getElementById('gridStage');
     const grid = document.getElementById('frontGrid');
     
-    // Protection contextuelle : Si nous ne sommes pas sur plan.php, on quitte immédiatement.
     if (!stage || !grid) return;
 
-    // Ciblage des boutons uniquement s'ils appartiennent au conteneur du plan
-    const btnIn = stage.parentElement.querySelector('#zoom-in') || document.getElementById('zoom-in');
-    const btnOut = stage.parentElement.querySelector('#zoom-out') || document.getElementById('zoom-out');
+    const btnIn = document.getElementById('plan-zoom-in') || document.getElementById('zoom-in');
+    const btnOut = document.getElementById('plan-zoom-out') || document.getElementById('zoom-out');
     const btnReset = document.getElementById('btnResetView') || document.getElementById('zoom-reset');
     
     let scale = 1;
@@ -310,10 +304,9 @@ function initGridGestures() {
         grid.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
     }
 
-    // Capture explicite et forcée du zoom molette sur plan.php
     stage.addEventListener('wheel', (e) => {
         e.preventDefault();
-        e.stopPropagation(); // Évite les conflits de propagation de fenêtres
+        e.stopPropagation();
         
         const zoomIntensity = 0.1;
         const previousScale = scale;
@@ -334,9 +327,8 @@ function initGridGestures() {
         applyTransform();
     }, { passive: false });
 
-    // Drag / Pan à la souris
     stage.addEventListener('mousedown', (e) => {
-        if (e.target.closest('.delete-item-trigger') || e.target.closest('.placed-element') || e.target.closest('.front-cell-content span')) return;
+        if (e.target.closest('.placed-element') || e.target.closest('.front-cell-content span')) return;
         isPanning = true;
         startX = e.clientX - translateX;
         startY = e.clientY - translateY;
@@ -353,42 +345,110 @@ function initGridGestures() {
         isPanning = false;
     });
 
-    // Liaison sécurisée des boutons de zoom pour l'espace plan.php
     if (btnIn) {
-        btnIn.addEventListener('click', (e) => {
-            if (document.getElementById('gridStage')) { // Double vérification de présence de la grille
-                scale = Math.min(maxScale, scale + 0.2);
-                applyTransform();
-            }
+        btnIn.addEventListener('click', () => {
+            scale = Math.min(maxScale, scale + 0.2);
+            applyTransform();
         });
     }
 
     if (btnOut) {
-        btnOut.addEventListener('click', (e) => {
-            if (document.getElementById('gridStage')) {
-                scale = Math.max(minScale, scale - 0.2);
-                applyTransform();
-            }
+        btnOut.addEventListener('click', () => {
+            scale = Math.max(minScale, scale - 0.2);
+            applyTransform();
         });
     }
 
     if (btnReset) {
         btnReset.addEventListener('click', () => {
-            if (document.getElementById('gridStage')) {
-                scale = 1;
-                translateX = 0;
-                translateY = 0;
-                applyTransform();
-                document.querySelectorAll('.grid-item').forEach(c => c.classList.remove('selected-layer'));
-                showToast("Vue du plan réinitialisée.");
-            }
+            scale = 1;
+            translateX = 0;
+            translateY = 0;
+            applyTransform();
+            document.querySelectorAll('.grid-item').forEach(c => c.classList.remove('selected-layer'));
+            showToast("Vue du plan réinitialisée.");
         });
     }
 }
 
-// ==========================================
-// FONCTIONS UTILITAIRES RESTANTES
-// ==========================================
+function initUmlFeatures() {
+    const viewport = document.getElementById('viewport');
+    const displayImage = document.getElementById('uml-display-image');
+    const links = document.querySelectorAll('.uml-link');
+    const zoomContainer = document.getElementById('zoom-container');
+    
+    const btnIn = document.getElementById('uml-zoom-in') || document.getElementById('zoom-in');
+    const btnOut = document.getElementById('uml-zoom-out') || document.getElementById('zoom-out');
+    const btnReset = document.getElementById('uml-zoom-reset') || document.getElementById('zoom-reset');
+
+    let umlScale = 1;
+    let translateUmlX = 0;
+    let translateUmlY = 0;
+    let isPanningUml = false;
+    let startUmlX = 0;
+    let startUmlY = 0;
+
+    function updateUmlTransform() {
+        if (zoomContainer) {
+            zoomContainer.style.transform = `translate(${translateUmlX}px, ${translateUmlY}px) scale(${umlScale})`;
+        }
+    }
+
+    function resetUmlView() {
+        umlScale = 1; translateUmlX = 0; translateUmlY = 0;
+        if (zoomContainer) {
+            zoomContainer.style.transition = 'none'; 
+            updateUmlTransform();
+            setTimeout(() => { zoomContainer.style.transition = 'transform 0.15s ease-out'; }, 50);
+        }
+    }
+
+    if (viewport) {
+        viewport.addEventListener('mousedown', (e) => {
+            if (e.target.closest('.zoom-controls')) return;
+            isPanningUml = true;
+            startUmlX = e.clientX - translateUmlX;
+            startUmlY = e.clientY - translateUmlY;
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isPanningUml) return;
+            translateUmlX = e.clientX - startUmlX;
+            translateUmlY = e.clientY - startUmlY;
+            updateUmlTransform();
+        });
+
+        window.addEventListener('mouseup', () => {
+            isPanningUml = false;
+        });
+        
+        viewport.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const zoomIntensity = 0.1;
+            if (e.deltaY < 0) {
+                umlScale = Math.min(4, umlScale + zoomIntensity);
+            } else {
+                umlScale = Math.max(0.4, umlScale - zoomIntensity);
+            }
+            updateUmlTransform();
+        }, { passive: false });
+    }
+
+    links.forEach(link => {
+        link.addEventListener('click', function (e) {
+            e.preventDefault();
+            links.forEach(l => l.classList.remove('active'));
+            this.classList.add('active');
+            displayImage.src = this.getAttribute('href');
+            displayImage.onload = () => resetUmlView();
+        });
+    });
+
+    if (btnIn) btnIn.addEventListener('click', () => { umlScale = Math.min(4, umlScale + 0.2); updateUmlTransform(); });
+    if (btnOut) btnOut.addEventListener('click', () => { umlScale = Math.max(0.4, umlScale - 0.2); updateUmlTransform(); });
+    if (btnReset) btnReset.addEventListener('click', resetUmlView);
+}
+
 function checkEmptyCatalog() {
     const wrappers = document.querySelectorAll('.catalog-item-wrapper');
     const msg = document.getElementById('emptyCatalogMsg');
@@ -455,36 +515,6 @@ function showToast(message, isError = false) {
     toast.textContent = message;
     toast.style.cssText = `position:fixed; bottom:20px; right:20px; z-index:9999; padding:12px 24px; border-radius:6px; color:white; font-size:13px; font-weight:500; display:block; box-shadow:0 4px 12px rgba(0,0,0,0.15); background:${isError ? '#ef4444' : '#10b981'}`;
     setTimeout(() => { toast.style.display = 'none'; }, 3500);
-}
-
-function attachDeleteEvent(btn) {
-    if (!btn) return;
-    btn.addEventListener('click', function (e) {
-        e.stopImmediatePropagation();
-        e.preventDefault();
-
-        const cell = this.closest('.grid-item');
-        const colIdx = cell.getAttribute('data-col');
-        const rowIdx = cell.getAttribute('data-row');
-
-        if (confirm(`Voulez-vous vraiment retirer cet objet de la case [Ligne ${rowIdx}, Colonne ${colIdx}] ?`)) {
-            const formData = new FormData();
-            formData.append('action_delete_item', '1');
-            formData.append('col_idx', colIdx);
-            formData.append('row_idx', rowIdx);
-            formData.append('current_floor', currentFloor);
-
-            fetch(window.location.href, { method: 'POST', body: formData })
-            .then(res => res.json())
-            .then(result => {
-                if (result.status === 'success') {
-                    showToast(result.message);
-                    window.location.reload();
-                } else { showToast(result.message, true); }
-            })
-            .catch(() => showToast("Erreur de communication réseau.", true));
-        }
-    });
 }
 
 function processMergeAction(cells, callback) {

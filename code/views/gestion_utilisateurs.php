@@ -28,7 +28,7 @@ $form_statut  = 1;
 if (isset($_GET['delete'])) {
     $idToDelete = trim($_GET['delete']);
 
-    if (isset($_SESSION['idUtilisateur']) && $idToDelete == $_SESSION['idUtilisateur']) {
+    if (isset($_SESSION['idUtilisateur']) && (int)$idToDelete === (int)$$_SESSION['idUtilisateur']) {
         $errorMsg = "Vous ne pouvez pas supprimer votre propre compte administrateur.";
     } else {
         try {
@@ -38,22 +38,22 @@ if (isset($_GET['delete'])) {
                 LEFT JOIN profils p ON u.idProfil = p.idProfil
                 WHERE u.idUtilisateur = ?
             ");
-            $stmtName->execute([$idToDelete]);
+            $stmtName->execute([(int)$idToDelete]);
             $agentInfo = $stmtName->fetch(PDO::FETCH_ASSOC);
 
             if ($agentInfo) {
-                $pdo->prepare("DELETE FROM users WHERE idUtilisateur = ?")->execute([$idToDelete]);
+                $pdo->prepare("DELETE FROM users WHERE idUtilisateur = ?")->execute([(int)$idToDelete]);
 
                 $pdo->prepare("INSERT INTO journal_logs (idUtilisateur, action, typeAction, cibleEntite, idCible) VALUES (?, ?, ?, ?, ?)")
                     ->execute([
-                        $_SESSION['idUtilisateur'],
+                        (int)$_SESSION['idUtilisateur'],
                         "Suppression du compte utilisateur",
                         "DELETE",
                         "users",
-                        "ID: $idToDelete | Nom: {$agentInfo['nom']} | Email: {$agentInfo['email']} | Rôle: {$agentInfo['labelProfil']}"
+                        "ID: " . str_pad($idToDelete, 5, '0', STR_PAD_LEFT) . " | Nom: {$agentInfo['nom']} | Email: {$agentInfo['email']} | Rôle: {$agentInfo['labelProfil']}"
                     ]);
 
-                $successMsg = "L'utilisateur « {$agentInfo['nom']} » (ID $idToDelete) a été supprimé avec succès.";
+                $successMsg = "L'utilisateur « {$agentInfo['nom']} » (ID " . str_pad($idToDelete, 5, '0', STR_PAD_LEFT) . ") a été supprimé avec succès.";
             } else {
                 $errorMsg = "Utilisateur introuvable.";
             }
@@ -80,10 +80,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_user'])) {
 
     if ($actionType === 'update' && empty($idUtilisateur)) {
         $errorMsg = "L'identifiant technique est requis pour la modification.";
-    } elseif ($actionType === 'create' && !preg_match('/^\d{4}$/', $passwordBrut)) {
-        $errorMsg = "Le mot de passe initial doit comporter exactement 4 chiffres.";
-    } elseif ($actionType === 'update' && !empty($passwordBrut) && !preg_match('/^\d{4}$/', $passwordBrut)) {
-        $errorMsg = "Le nouveau mot de passe doit comporter exactement 4 chiffres.";
+    } elseif ($actionType === 'create' && !preg_match('/^\d{5}$/', $passwordBrut)) {
+        $errorMsg = "Le mot de passe initial doit comporter exactement 5 chiffres.";
+    } elseif ($actionType === 'update' && !empty($passwordBrut) && !preg_match('/^\d{5}$/', $passwordBrut)) {
+        $errorMsg = "Le nouveau mot de passe doit comporter exactement 5 chiffres.";
     } elseif (!empty($nom) && !empty($email)) {
 
         try {
@@ -94,51 +94,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_user'])) {
                 if ($stmtCheck->fetchColumn() > 0) {
                     $errorMsg = "Cette adresse email est déjà attribuée.";
                 } else {
-                    $passwordHash = password_hash($passwordBrut, PASSWORD_BCRYPT);
+                    // Synchronisé avec le SHA2 de MySQL
+                    $passwordHash = hash('sha256', $passwordBrut);
+                    
                     $pdo->prepare("INSERT INTO users (nom, email, tel, motDePasse, idProfil, idLocalAssigne, statut) VALUES (?, ?, ?, ?, ?, ?, ?)")
                         ->execute([$nom, $email, $tel, $passwordHash, $profilId, $idLocal, $statut]);
 
                     $newId = $pdo->lastInsertId();
-
+                    $displayId = str_pad($newId, 5, '0', STR_PAD_LEFT);
                     $statusLabel = ($statut === 1) ? 'Actif' : 'Inactif';
+                    
                     $pdo->prepare("INSERT INTO journal_logs (idUtilisateur, action, typeAction, cibleEntite, idCible) VALUES (?, ?, ?, ?, ?)")
                         ->execute([
-                            $_SESSION['idUtilisateur'],
+                            (int)$_SESSION['idUtilisateur'],
                             "Création du compte utilisateur",
                             "INSERT",
                             "users",
-                            "ID: $newId | Nom: $nom | Email: $email | Rôle: $roleLabel | Statut: $statusLabel" . ($idLocal ? " | Zone: $idLocal" : "")
+                            "ID: $displayId | Nom: $nom | Email: $email | Rôle: $roleLabel | Statut: $statusLabel" . ($idLocal ? " | Zone: $idLocal" : "")
                         ]);
 
-                    $successMsg = "L'utilisateur « $nom » a été enregistré avec succès.";
+                    $successMsg = "L'utilisateur « $nom » a été enregistré avec succès avec l'ID $displayId.";
                 }
 
             } elseif ($actionType === 'update') {
+                $idInt = (int)$idUtilisateur;
                 $stmtCheckEmail = $pdo->prepare("SELECT COUNT(*) FROM users WHERE email = ? AND idUtilisateur != ?");
-                $stmtCheckEmail->execute([$email, $idUtilisateur]);
+                $stmtCheckEmail->execute([$email, $idInt]);
 
                 if ($stmtCheckEmail->fetchColumn() > 0) {
                     $errorMsg = "Cette adresse email est déjà associée à un autre agent.";
                 } else {
                     if (!empty($passwordBrut)) {
-                        $passwordHash = password_hash($passwordBrut, PASSWORD_BCRYPT);
+                        // Synchronisé avec le SHA2 de MySQL
+                        $passwordHash = hash('sha256', $passwordBrut);
                         $pdo->prepare("UPDATE users SET nom=?, email=?, tel=?, motDePasse=?, idProfil=?, idLocalAssigne=?, statut=? WHERE idUtilisateur=?")
-                            ->execute([$nom, $email, $tel, $passwordHash, $profilId, $idLocal, $statut, $idUtilisateur]);
+                            ->execute([$nom, $email, $tel, $passwordHash, $profilId, $idLocal, $statut, $idInt]);
                         $pwdNote = " | Mot de passe : réinitialisé";
                     } else {
                         $pdo->prepare("UPDATE users SET nom=?, email=?, tel=?, idProfil=?, idLocalAssigne=?, statut=? WHERE idUtilisateur=?")
-                            ->execute([$nom, $email, $tel, $profilId, $idLocal, $statut, $idUtilisateur]);
+                            ->execute([$nom, $email, $tel, $profilId, $idLocal, $statut, $idInt]);
                         $pwdNote = "";
                     }
 
+                    $displayId = str_pad($idInt, 5, '0', STR_PAD_LEFT);
                     $statusLabel = ($statut === 1) ? 'Actif' : 'Inactif';
+                    
                     $pdo->prepare("INSERT INTO journal_logs (idUtilisateur, action, typeAction, cibleEntite, idCible) VALUES (?, ?, ?, ?, ?)")
                         ->execute([
-                            $_SESSION['idUtilisateur'],
+                            (int)$_SESSION['idUtilisateur'],
                             "Modification du compte utilisateur",
                             "UPDATE",
                             "users",
-                            "ID: $idUtilisateur | Nom: $nom | Email: $email | Rôle: $roleLabel | Statut: $statusLabel" . ($idLocal ? " | Zone: $idLocal" : "") . $pwdNote
+                            "ID: $displayId | Nom: $nom | Email: $email | Rôle: $roleLabel | Statut: $statusLabel" . ($idLocal ? " | Zone: $idLocal" : "") . $pwdNote
                         ]);
 
                     $successMsg = "Les informations de l'agent « $nom » ont été mises à jour.";
@@ -154,12 +161,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_user'])) {
 
 if (isset($_GET['edit'])) {
     $stmtEdit = $pdo->prepare("SELECT * FROM users WHERE idUtilisateur = ?");
-    $stmtEdit->execute([trim($_GET['edit'])]);
+    $stmtEdit->execute([(int)trim($_GET['edit'])]);
     $agentToEdit = $stmtEdit->fetch(PDO::FETCH_ASSOC);
 
     if ($agentToEdit) {
         $isEditMode   = true;
-        $form_id      = $agentToEdit['idUtilisateur'];
+        $form_id      = str_pad($agentToEdit['idUtilisateur'], 5, '0', STR_PAD_LEFT);
         $form_nom     = $agentToEdit['nom'];
         $form_email   = $agentToEdit['email'];
         $form_tel     = $agentToEdit['tel'];
@@ -224,7 +231,7 @@ try {
                                 foreach ($pdo->query("SELECT * FROM profils ORDER BY idProfil ASC")->fetchAll(PDO::FETCH_ASSOC) as $p):
                                     $sel = ($form_profil == $p['idProfil']) ? 'selected' : '';
                                     echo "<option value='{$p['idProfil']}' $sel>" . htmlspecialchars($p['labelProfil']) . "</option>";
-                                endforeach;
+                                    endforeach;
                             } catch (PDOException $e) {
                                 foreach ([1=>'Administrateur',2=>'Responsable',3=>'Chauffeur'] as $idRef => $role)
                                     echo "<option value='$idRef'" . ($form_profil==$idRef?' selected':'') . ">$role</option>";
@@ -241,7 +248,7 @@ try {
 
                 <div class="form-control">
                     <label for="email">Adresse Email Institutionnelle *</label>
-                    <input type="email" id="email" name="email" required placeholder="Ex: a.benali@example.com" value="<?= htmlspecialchars($form_email) ?>">
+                    <input type="email" id="email" name="email" required placeholder="Ex: a.benali@steg.com.tn" value="<?= htmlspecialchars($form_email) ?>">
                 </div>
 
                 <div class="form-group-row">
@@ -252,8 +259,8 @@ try {
                     <div class="form-control">
                         <label for="password">Mot de passe <?= $isEditMode ? '(Optionnel)' : '*' ?></label>
                         <input type="password" id="password" name="password"
-                               pattern="\d{4}" maxlength="4" inputmode="numeric"
-                               placeholder="<?= $isEditMode ? 'Laisser vide pour inchangé' : '••••' ?>"
+                               pattern="\d{5}" maxlength="5" minlength="5" inputmode="numeric"
+                               placeholder="<?= $isEditMode ? 'Laisser vide pour inchangé' : '•••••' ?>"
                                <?= $isEditMode ? '' : 'required' ?>>
                     </div>
                 </div>
@@ -332,7 +339,7 @@ try {
                     <tbody>
                         <?php foreach ($agents as $agent): ?>
                         <tr>
-                            <td class="cell-user-id"><?= str_pad($agent['idUtilisateur'], 4, '0', STR_PAD_LEFT) ?></td>
+                            <td class="cell-user-id"><?= str_pad($agent['idUtilisateur'], 5, '0', STR_PAD_LEFT) ?></td>
                             <td><strong><?= htmlspecialchars($agent['nom']) ?></strong></td>
                             <td>
                                 <span class="badge-role-type role-<?= strtolower($agent['labelProfil'] ?? 'agent') ?>">

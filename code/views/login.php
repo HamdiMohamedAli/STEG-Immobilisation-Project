@@ -15,54 +15,74 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $idUtilisateur = trim($_POST['idUtilisateur']);
     $password      = trim($_POST['password']);
 
+    // Validation stricte : exactement 5 chiffres
     if (preg_match('/^\d{5}$/', $idUtilisateur) && preg_match('/^\d{5}$/', $password)) {
         try {
+            // Conversion en entier pour matcher l'ID numérique de MySQL (qui ignore les zéros à gauche à la recherche)
+            $idInt = (int)$idUtilisateur;
+
             $stmt = $pdo->prepare("SELECT * FROM users WHERE idUtilisateur = ?");
-            $stmt->execute([$idUtilisateur]);
+            $stmt->execute([$idInt]);
             $utilisateur = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            if ($utilisateur && password_verify($password, $utilisateur['motDePasse'])) {
+            if ($utilisateur) {
+                // Génération du hash PHP en minuscules
+                $hashSaisi = strtolower(hash('sha256', $password));
                 
-                if ((int)$utilisateur['statut'] !== 1) {
-                    try {
-                        $stmtLog = $pdo->prepare("INSERT INTO journal_logs (idUtilisateur, action, typeAction, cibleEntite, idCible) VALUES (?, ?, ?, ?, ?)");
-                        $stmtLog->execute([
-                            $utilisateur['idUtilisateur'],
-                            "Tentative de connexion sur un compte bloqué",
-                            "ERROR",
-                            "Utilisateur",
-                            "ID: {$utilisateur['idUtilisateur']} | Nom: {$utilisateur['nom']} | Statut: Inactif"
-                        ]);
-                    } catch (PDOException $e) {}
+                // CORRECTION FINALE : On force la comparaison en minuscules pour ignorer les caprices de casse de SHA2() selon les serveurs
+                if (hash_equals(strtolower($utilisateur['motDePasse']), $hashSaisi)) {
+                    
+                    // Vérification du statut du compte
+                    if ((int)$utilisateur['statut'] !== 1) {
+                        try {
+                            $stmtLog = $pdo->prepare("INSERT INTO journal_logs (idUtilisateur, action, typeAction, cibleEntite, idCible) VALUES (?, ?, ?, ?, ?)");
+                            $stmtLog->execute([
+                                $idInt,
+                                "Tentative de connexion sur un compte bloqué",
+                                "ERROR",
+                                "Utilisateur",
+                                "ID: {$idUtilisateur} | Nom: {$utilisateur['nom']} | Statut: Inactif"
+                            ]);
+                        } catch (PDOException $e) {}
 
-                    $error = "Votre compte est inactif ou a été suspendu. Veuillez contacter votre administrateur.";
+                        $error = "Votre compte est inactif ou a été suspendu. Veuillez contacter votre administrateur.";
+                    } else {
+                        // Récupération du profil
+                        $stmtProfil = $pdo->prepare("SELECT * FROM profils WHERE idProfil = ?");
+                        $stmtProfil->execute([$utilisateur['idProfil']]);
+                        $profil = $stmtProfil->fetch(PDO::FETCH_ASSOC);
+
+                        // Stockage propre en session (Réintroduction des zéros à gauche pour l'affichage)
+                        $_SESSION['idUtilisateur']     = str_pad($utilisateur['idUtilisateur'], 5, '0', STR_PAD_LEFT);
+                        $_SESSION['nom']               = $utilisateur['nom'];
+                        $_SESSION['idProfil']          = $utilisateur['idProfil'];
+                        $_SESSION['labelProfil']       = $profil ? $profil['labelProfil'] : 'Visiteur';
+                        $_SESSION['idLocalDesignated'] = $utilisateur['idLocalAssigne'];
+
+                        // Log de connexion réussie
+                        try {
+                            $stmtLog = $pdo->prepare("INSERT INTO journal_logs (idUtilisateur, action, typeAction, cibleEntite, idCible) VALUES (?, ?, ?, ?, ?)");
+                            $stmtLog->execute([
+                                $idInt,
+                                "Connexion au système",
+                                "LOGIN",
+                                "Utilisateur",
+                                "ID: {$_SESSION['idUtilisateur']} | Nom: {$_SESSION['nom']} | Rôle: {$_SESSION['labelProfil']}"
+                            ]);
+                        } catch (PDOException $e) {}
+
+                        header('Location: main.php');
+                        exit();
+                    }
                 } else {
-                    $stmt = $pdo->prepare("SELECT * FROM profils WHERE idProfil = ?");
-                    $stmt->execute([$utilisateur['idProfil']]);
-                    $profil = $stmt->fetch(PDO::FETCH_ASSOC);
-
-                    $_SESSION['idUtilisateur']     = $utilisateur['idUtilisateur'];
-                    $_SESSION['nom']               = $utilisateur['nom'];
-                    $_SESSION['idProfil']          = $utilisateur['idProfil'];
-                    $_SESSION['labelProfil']       = $profil ? $profil['labelProfil'] : 'Visiteur';
-                    $_SESSION['idLocalDesignated'] = $utilisateur['idLocalAssigne'];
-
-                    try {
-                        $stmtLog = $pdo->prepare("INSERT INTO journal_logs (idUtilisateur, action, typeAction, cibleEntite, idCible) VALUES (?, ?, ?, ?, ?)");
-                        $stmtLog->execute([
-                            $_SESSION['idUtilisateur'],
-                            "Connexion au système",
-                            "LOGIN",
-                            "Utilisateur",
-                            "ID: {$_SESSION['idUtilisateur']} | Nom: {$_SESSION['nom']} | Rôle: {$_SESSION['labelProfil']}"
-                        ]);
-                    } catch (PDOException $e) {}
-
-                    header('Location: main.php');
-                    exit();
+                    $error = "Identifiant (ID) ou mot de passe incorrect.";
                 }
-
             } else {
+                $error = "Identifiant (ID) ou mot de passe incorrect.";
+            }
+
+            // Log en cas d'échec d'authentification
+            if (!empty($error) && $error === "Identifiant (ID) ou mot de passe incorrect.") {
                 try {
                     $stmtLog = $pdo->prepare("INSERT INTO journal_logs (idUtilisateur, action, typeAction, cibleEntite, idCible) VALUES (?, ?, ?, ?, ?)");
                     $stmtLog->execute([
@@ -73,9 +93,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         "ID saisi: $idUtilisateur"
                     ]);
                 } catch (PDOException $e) {}
-
-                $error = "Identifiant (ID) ou mot de passe incorrect.";
             }
+
         } catch (PDOException $e) {
             $error = "Une erreur serveur est survenue. Veuillez réessayer plus tard.";
         }
@@ -108,7 +127,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <label for="idUtilisateur">Identifiant</label>
                 <input type="text" id="idUtilisateur" name="idUtilisateur" required
                        pattern="\d{5}" maxlength="5" minlength="5"
-                       inputmode="numeric" placeholder="Ex: 00000">
+                       inputmode="numeric" placeholder="Ex: 00001">
             </div>
 
             <div class="form-group">
