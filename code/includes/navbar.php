@@ -22,9 +22,13 @@ $idProfil = $_SESSION['idProfil'] ?? null;
                 <li><a href="gestion_magasin.php" class="nav-item"><i class="fa-solid fa-boxes-stacked"></i> Magasin</a></li>
             <?php endif; ?>
 
-            <?php if (in_array((int)$idProfil, [1, 2, 3])): ?>
+            <?php if (in_array((int)$idProfil, [1, 2])): ?>
                 <li><a href="logs.php" class="nav-item"><i class="fa-solid fa-history"></i> Journal Logs</a></li>
+            <?php endif; ?>
+
+            <?php if (in_array((int)$idProfil, [1])): ?>
                 <li><a href="uml.php" class="nav-item"><i class="fa-solid fa-diagram-project"></i> UML</a></li>
+                <li><a href="rapport.php" class="nav-item"><i class="fa-solid fa-book"></i> Rapport</a></li>
             <?php endif; ?>
         <?php endif; ?>
     </ul>

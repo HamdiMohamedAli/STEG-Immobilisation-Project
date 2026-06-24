@@ -5,7 +5,18 @@ if (session_status() === PHP_SESSION_NONE) {
 
 require_once '../config/db.php';
 
-// --- AJAX ENDPOINT FOR REMOVING PLACED ITEMS ---
+$errorMessage = "";
+$successMessage = "";
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_submit_steg_form'])) {
+    $idCible = $_POST['idCible'] ?? '0';
+    if (empty($idCible) || $idCible === '0') {
+        $errorMessage = "Veuillez sélectionner un article valide depuis la liste déroulante.";
+    } else {
+        $successMessage = "Formulaire validé avec succès.";
+    }
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_delete_item'])) {
     header('Content-Type: application/json');
     
@@ -56,7 +67,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_delete_item'])
     exit;
 }
 
-// --- STANDARD PLACEMENT ENDPOINT ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_position'])) {
     header('Content-Type: application/json');
     
@@ -114,14 +124,14 @@ $canMergeCells = in_array($userProfil, [1, 2, 3]);
 $allowedTypes = [];
 if (in_array($userProfil, [1, 2, 5])) { $allowedTypes[] = 'Voiture'; }
 if (in_array($userProfil, [1, 2, 3])) { $allowedTypes[] = 'Local'; }
-if (in_array($userProfil, [1, 2, 4])) { $allowedTypes[] = 'Immobilisation'; }
-if (in_array($userProfil, [1, 2, 4])) { $allowedTypes[] = 'Equipement'; }
+if (in_array($userProfil, [1, 2, 3, 4, 5, 6])) { $allowedTypes[] = 'Immobilisation'; }
+if (in_array($userProfil, [1, 2, 3, 4, 5, 6])) { $allowedTypes[] = 'Equipement'; }
 
 $composants = [];
 
 if (in_array('Voiture', $allowedTypes)) {
     try {
-        $queryVoitures = "SELECT matricule, marque, modele FROM voitures WHERE statut = 'Disponible'";
+        $queryVoitures = "SELECT matricule, marque, modele FROM voitures WHERE statut = 'Disponible' AND matricule NOT IN (SELECT matriculeVoiture FROM element_plan WHERE matriculeVoiture IS NOT NULL)";
         $itemsV = $pdo->query($queryVoitures)->fetchAll(PDO::FETCH_ASSOC);
         foreach ($itemsV as $item) {
             $composants[] = [
@@ -154,7 +164,7 @@ if (!empty($magasinTypes)) {
     try {
         $inClause = implode(',', array_fill(0, count($magasinTypes), '?'));
         $queryMagasin = "SELECT MIN(m.idMagasin) as idMagasin, m.typeEntite, m.referenceInterne,
-                         SUM(m.quantiteDisponible) as totalStock,
+                         (SUM(m.quantiteDisponible) - COALESCE(ep_count.placed, 0)) as totalStock,
                          CASE 
                             WHEN m.typeEntite = 'Equipement' THEN eq.libelle
                             WHEN m.typeEntite = 'Immobilisation' THEN im.libelle
@@ -162,19 +172,27 @@ if (!empty($magasinTypes)) {
                          FROM magasin m
                          LEFT JOIN equipements eq ON m.typeEntite = 'Equipement' AND m.idCible = eq.idEquip
                          LEFT JOIN immobilisations im ON m.typeEntite = 'Immobilisation' AND m.idCible = im.idImmo
+                         LEFT JOIN (
+                            SELECT idMagasin, COUNT(*) as placed 
+                            FROM element_plan 
+                            WHERE idMagasin IS NOT NULL 
+                            GROUP BY idMagasin
+                         ) ep_count ON m.idMagasin = ep_count.idMagasin
                          WHERE m.quantiteDisponible > 0 AND m.typeEntite IN ($inClause)
-                         GROUP BY m.typeEntite, m.referenceInterne, element_label";
+                         GROUP BY m.typeEntite, m.referenceInterne, element_label, ep_count.placed";
         
         $stmtM = $pdo->prepare($queryMagasin);
         $stmtM->execute(array_values($magasinTypes));
         $itemsM = $stmtM->fetchAll(PDO::FETCH_ASSOC);
         foreach ($itemsM as $item) {
-            $composants[] = [
-                'value' => $item['idMagasin'],
-                'label' => $item['element_label'] . " (" . $item['referenceInterne'] . ")",
-                'type' => $item['typeEntite'],
-                'stock' => $item['totalStock']
-            ];
+            if (intval($item['totalStock']) > 0) {
+                $composants[] = [
+                    'value' => $item['idMagasin'],
+                    'label' => $item['element_label'] . " (" . $item['referenceInterne'] . ")",
+                    'type' => $item['typeEntite'],
+                    'stock' => $item['totalStock']
+                ];
+            }
         }
     } catch (PDOException $e) {}
 }
@@ -215,19 +233,17 @@ try {
             $type = $raw['mType'];
         }
 
-        if ($label !== '') {
+        if ($label !== '' && in_array($type, $allowedTypes)) {
             $elementsPositionnes["{$r}_{$c}"] = ['label' => $label, 'type' => $type];
         }
     }
 } catch (PDOException $e) {}
 
-// Group components dynamically by type for details layout structuring
 $groupedComposants = [];
 foreach ($composants as $comp) {
     $groupedComposants[$comp['type']][] = $comp;
 }
 
-// Friendly mapping labels for French groups
 $groupLabels = [
     'Voiture' => '🚗 Voitures',
     'Local' => '🏢 Locaux',
@@ -236,66 +252,344 @@ $groupLabels = [
 ];
 ?>
 
+<?php if (!empty($errorMessage)): ?>
+    <script>alert(<?= json_encode($errorMessage) ?>);</script>
+<?php endif; ?>
+
 <style>
-    :root {
-        --bg-main: #0f172a;
-        --bg-card: #1e293b;
-        --border-color: #334155;
-        --text-muted: #94a3b8;
-        --accent-blue: #3b82f6;
+    .main-wrapper {
+        display: flex;
+        height: calc(100vh - 60px); 
+        font-family: system-ui, -apple-system, sans-serif;
+        background-color: #0f172a; 
+        overflow: hidden;
     }
-    body { background-color: var(--bg-main); color: #f8fafc; font-family: 'Inter', system-ui, sans-serif; overflow-x: hidden; }
     
-    .main-wrapper { 
-        display: grid; 
-        grid-template-columns: minmax(260px, 300px) 1fr minmax(260px, 300px); 
-        gap: 20px; 
-        padding: 20px; 
-        max-width: 100%; 
+    .sidebar, .control-sidebar { 
+        width: 320px;
+        background: #1e293b; 
+        border-right: 1px solid #334155;
+        padding: 20px;
+        overflow-y: auto;
+        box-shadow: 4px 0 15px rgba(0, 0, 0, 0.2);
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .control-sidebar {
+        border-right: none;
+        border-left: 1px solid #334155;
+    }
+
+    .sidebar h3, .control-sidebar h3 { 
+        font-size: 1.1rem;
+        color: #f8fafc;
+        margin: 0;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #334155;
+    }
+
+    .search-select-box { 
+        background: #0f172a; 
+        border: 1px solid #334155; 
+        border-radius: 8px; 
+        padding: 6px; 
+    }
+
+    .search-select-box input { 
+        background: #1e293b; 
+        border: 1px solid #334155; 
+        color: white; 
+        padding: 8px; 
+        border-radius: 6px; 
+        font-size: 13px; 
+        outline: none; 
+        width: 100%; 
         box-sizing: border-box; 
     }
     
-    .sidebar, .control-sidebar { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 20px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); align-self: start; min-width: 0; }
-    .sidebar h3, .control-sidebar h3 { font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin: 0; display: flex; align-items: center; gap: 8px; }
-    .search-select-box { background: #111827; border: 1px solid var(--border-color); border-radius: 8px; padding: 6px; display: flex; flex-direction: column; gap: 8px; }
-    .search-select-box input { background: #1e293b; border: 1px solid var(--border-color); color: white; padding: 8px; border-radius: 6px; font-size: 13px; outline: none; width: 100%; box-sizing: border-box; }
+    .catalog-group { 
+        margin-bottom: 8px; 
+        background: #0f172a; 
+        border: 1px solid #334155; 
+        border-radius: 8px; 
+        overflow: hidden; 
+    }
+
+    .catalog-group summary { 
+        padding: 10px 12px; 
+        font-size: 13px; 
+        font-weight: 600; 
+        color: #f8fafc; 
+        cursor: pointer; 
+        user-select: none; 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center; 
+        background: #1e293b; 
+    }
+
+    .catalog-group summary::after { 
+        content: '\25BC'; 
+        font-size: 9px; 
+        color: #94a3b8; 
+    }
+
+    .catalog-group[open] summary::after { 
+        transform: rotate(180deg); 
+    }
     
-    /* Styled Accordion Groups */
-    .catalog-group { margin-bottom: 8px; background: #111827; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; }
-    .catalog-group summary { padding: 10px 12px; font-size: 13px; font-weight: 600; color: #f8fafc; cursor: pointer; user-select: none; list-style: none; display: flex; justify-content: space-between; align-items: center; background: #1e293b; transition: background 0.2s; }
-    .catalog-group summary::-webkit-details-marker { display: none; }
-    .catalog-group summary:hover { background: #24334d; }
-    .catalog-group summary::after { content: '\25BC'; font-size: 9px; color: var(--text-muted); transition: transform 0.2s; }
-    .catalog-group[open] summary::after { transform: rotate(180deg); }
+    .catalogue-container { 
+        max-height: 250px; 
+        overflow-y: auto; 
+        list-style: none; 
+        padding: 8px; 
+        margin: 0; 
+        display: flex; 
+        flex-direction: column; 
+        gap: 6px; 
+    }
+
+    .drag-item { 
+        background: #1e293b; 
+        border: 1px solid #334155; 
+        padding: 10px 12px; 
+        border-radius: 8px; 
+        cursor: grab; 
+        font-size: 13px; 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center; 
+        color: #cbd5e1;
+    }
+
+    .drag-item:hover { 
+        border-color: #38bdf8; 
+        background: #334155; 
+    }
+
+    .badge-stock { 
+        background: #334155; 
+        color: #e2e8f0; 
+        font-size: 11px; 
+        padding: 2px 6px; 
+        border-radius: 20px; 
+        font-weight: 600; 
+    }
     
-    .catalogue-container { max-height: 350px; overflow-y: auto; list-style: none; padding: 8px; margin: 0; display: flex; flex-direction: column; gap: 6px; }
-    .drag-item { background: #1e293b; border: 1px solid var(--border-color); padding: 10px 12px; border-radius: 8px; cursor: grab; font-size: 13px; display: flex; justify-content: space-between; align-items: center; transition: all 0.2s; min-width: 0; }
-    .drag-item span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .drag-item:hover { border-color: var(--accent-blue); background: #2563eb1a; }
-    .badge-stock { background: #334155; color: #e2e8f0; font-size: 11px; padding: 2px 6px; border-radius: 20px; font-weight: 600; flex-shrink: 0; }
+    .uml-viewport { 
+        position: relative;
+        flex: 1;
+        background-color: #0f172a; 
+        overflow: hidden;
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Suppression stricte des scrollbars sur la scène de grille */
+    .grid-stage { 
+        background: #0f172a; 
+        border-radius: 8px; 
+        border: 2px dashed #334155; 
+        padding: 16px; 
+        flex: 1; 
+        overflow: hidden; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        cursor: grab;
+        -ms-overflow-style: none;  /* IE and Edge */
+        scrollbar-width: none;  /* Firefox */
+    }
+
+    .grid-stage::-webkit-scrollbar {
+        display: none; /* Chrome, Safari and Opera */
+    }
+
+    .grid-stage:active {
+        cursor: grabbing;
+    }
+
+    .grid-container { 
+        display: grid; 
+        background: #1e293b; 
+        border: 1px solid #475569; 
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4);
+        transform-origin: center center;
+        will-change: transform;
+        user-select: none;
+    }
     
-    .uml-viewport { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); min-width: 0; }
-    .grid-stage { background: #0f172a; border-radius: 8px; border: 2px dashed var(--border-color); overflow: auto; padding: 10px; max-width: 100%; }
-    .grid-container { display: grid; background: #1e293b; border: 1px solid #475569; width: max-content; }
+    .grid-item { 
+        border: 1px solid #334155; 
+        position: relative; 
+        box-sizing: border-box; 
+        background: #1e293b; 
+    }
+
+    .grid-item.drag-hover .front-cell-content { 
+        background: rgba(3, 105, 161, 0.4); 
+        outline: 2px dashed #38bdf8; 
+    }
     
-    .grid-item { border: 1px solid #334155; width: 50px; height: 50px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 9px; color: #475569; position: relative; box-sizing: border-box; transition: background 0.15s; }
-    .grid-item.drag-hover { background: rgba(59, 130, 246, 0.2); border: 2px dashed var(--accent-blue); }
-    .placed-element { position: absolute; inset: 2px; border-radius: 4px; padding: 4px; font-size: 10px; font-weight: bold; color: white; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+    .front-cell-content { 
+        position: absolute; 
+        inset: 0; 
+        display: flex; 
+        flex-direction: column; 
+        align-items: center; 
+        justify-content: center; 
+        font-size: 9px; 
+        color: #475569; 
+        z-index: 2; 
+        background: #1e293b; 
+    }
+
+    .grid-item:hover .front-cell-content { 
+        background: rgba(30, 41, 59, 0.85); 
+    }
+    
+    .sub-grid-cell { 
+        position: absolute; 
+        inset: 0; 
+        background: #090d16; 
+        display: flex; 
+        flex-direction: column; 
+        align-items: center; 
+        justify-content: center; 
+        font-size: 8px; 
+        color: #0284c7; 
+        opacity: 0.7; 
+        z-index: 1; 
+    }
+
+    .grid-item.selected-layer .front-cell-content { 
+        background: rgba(30, 41, 59, 0.15) !important; 
+        outline: 2px solid #0369a1; 
+        color: #f8fafc; 
+    }
+
+    .placed-element { 
+        position: absolute; 
+        inset: 2px; 
+        border-radius: 4px; 
+        padding: 4px; 
+        font-size: 10px; 
+        font-weight: bold; 
+        color: white; 
+        display: flex; 
+        flex-direction: column; 
+        justify-content: space-between; 
+        z-index: 3; 
+    }
+    
     .type-Voiture { background: #0284c7; border-left: 3px solid #0ea5e9; }
     .type-Local { background: #b45309; border-left: 3px solid #f59e0b; }
     .type-Equipement { background: #047857; border-left: 3px solid #10b981; }
     .type-Immobilisation { background: #6d28d9; border-left: 3px solid #8b5cf6; }
-    .delete-item-trigger { background: rgba(0,0,0,0.3); border: none; color: #f87171; border-radius: 3px; cursor: pointer; padding: 2px 5px; align-self: flex-end; font-size: 10px; transition: background 0.2s; }
-    .delete-item-trigger:hover { background: #ef4444; color: white; }
-    .control-btn, .merge-action-btn { background: #334155; border: 1px solid var(--border-color); color: white; padding: 8px 12px; border-radius: 6px; text-decoration: none; font-size: 13px; text-align: center; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.2s; width: 100%; box-sizing: border-box; }
-    .control-btn:hover, .merge-action-btn:hover { background: #475569; }
-    .uml-link { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 8px; color: var(--text-muted); text-decoration: none; font-size: 13px; }
-    .uml-link.active { background: #2563eb; color: white; font-weight: 500; }
-    #toast-notification { position: fixed; bottom: 20px; right: 20px; display: none; z-index: 1000; transition: all 0.3s ease; }
     
-    @media (max-width: 1024px) {
-        .main-wrapper { grid-template-columns: 1fr; }
-        .sidebar, .control-sidebar { width: 100%; }
+    .delete-item-trigger { 
+        background: rgba(0,0,0,0.3); 
+        border: none; 
+        color: #f87171; 
+        border-radius: 3px; 
+        cursor: pointer; 
+        padding: 2px 5px; 
+        font-size: 10px; 
+        z-index: 5; 
+    }
+
+    .delete-item-trigger:hover { 
+        background: #ef4444; 
+        color: white; 
+    }
+
+    .control-btn { 
+        background: #334155; 
+        border: 1px solid #475569; 
+        color: white; 
+        padding: 8px 12px; 
+        border-radius: 6px; 
+        text-decoration: none; 
+        font-size: 13px; 
+        text-align: center; 
+        cursor: pointer; 
+        display: inline-flex; 
+        align-items: center; 
+        justify-content: center; 
+        gap: 8px; 
+        transition: all 0.2s;
+    }
+
+    .control-btn:hover { 
+        background: #475569; 
+        color: #38bdf8;
+    }
+
+    .control-btn.active {
+        background: #0369a1;
+        color: white;
+    }
+
+    /* Style identique aux contrôles UML */
+    .zoom-controls {
+        position: absolute;
+        bottom: 25px; 
+        left: 50%;
+        transform: translateX(-50%); 
+        display: flex;
+        flex-direction: row; 
+        gap: 8px; 
+        z-index: 10;
+        background: rgba(30, 41, 59, 0.85); 
+        padding: 6px; 
+        width: max-content; 
+        border-radius: 30px; 
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(10px);
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+    }
+
+    .zoom-controls button {
+        background: #334155;
+        border: 1px solid #475569;
+        border-radius: 50%; 
+        width: 36px; 
+        height: 36px;
+        font-size: 0.95rem;
+        color: #f8fafc;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+        user-select: none;
+    }
+
+    .zoom-controls button:hover {
+        background: #475569;
+        border-color: #64748b;
+        transform: scale(1.08);
+    }
+
+    .zoom-controls button:active {
+        transform: scale(0.92);
+        background: #1e293b;
+    }
+
+    #toast-notification { 
+        position: fixed; 
+        bottom: 20px; 
+        right: 20px; 
+        display: none; 
+        z-index: 1000; 
+        background: #1e293b;
+        border: 1px solid #334155;
+        padding: 12px 24px;
+        border-radius: 8px;
+        box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);
     }
 </style>
 
@@ -303,23 +597,24 @@ $groupLabels = [
 
 <div class="main-wrapper">
     <div class="sidebar">
-        <h3><i class="fa-solid fa-boxes-stacked"></i> Matériel & Catalogues</h3>
+        <h3>Matériel & Catalogues</h3>
         <div class="search-select-box">
             <input type="text" id="catalogSearch" placeholder="Rechercher un composant...">
         </div>
 
-        <div id="accordionGroupContainer" style="margin-top: 10px;">
+        <div id="accordionGroupContainer">
             <?php if (empty($groupedComposants)): ?>
-                <span style="font-size:12px; color:var(--text-muted); font-style:italic; padding: 10px;">Aucun article disponible.</span>
+                <span id="emptyCatalogMsg" style="font-size:12px; color:var(--text-muted); font-style:italic; padding: 10px;">Aucun article disponible.</span>
             <?php else: ?>
+                <span id="emptyCatalogMsg" style="font-size:12px; color:var(--text-muted); font-style:italic; padding: 10px; display:none;">Aucun article disponible.</span>
                 <?php foreach ($groupedComposants as $typeKey => $items): ?>
-                    <details class="catalog-group" open data-group-type="<?= $typeKey ?>">
+                    <details class="catalog-group" data-group-type="<?= $typeKey ?>">
                         <summary><?= $groupLabels[$typeKey] ?? $typeKey ?></summary>
                         <ul class="catalogue-container">
                             <?php foreach ($items as $comp): ?>
                                 <li class="catalog-item-wrapper">
-                                    <div class="drag-item type-<?= $comp['type'] ?>" draggable="true" data-id="<?= $comp['value'] ?>" data-label="<?= htmlspecialchars($comp['label']) ?>" data-type="<?= $comp['type'] ?>">
-                                        <span><i class="fa-solid fa-grip-vertical" style="opacity: 0.4; margin-right: 6px;"></i><?= htmlspecialchars($comp['label']) ?></span>
+                                    <div class="drag-item" draggable="true" data-id="<?= $comp['value'] ?>" data-label="<?= htmlspecialchars($comp['label']) ?>" data-type="<?= $comp['type'] ?>">
+                                        <span><?= htmlspecialchars($comp['label']) ?></span>
                                         <span class="badge-stock">x<?= $comp['stock'] ?></span>
                                     </div>
                                 </li>
@@ -332,271 +627,58 @@ $groupLabels = [
     </div>
 
     <div class="uml-viewport">
-        <h2 style="font-size: 18px; margin-top: 0; margin-bottom: 20px; font-weight: 600;">
+        <h2 style="font-size: 1.2rem; margin-top: 0; margin-bottom: 20px; font-weight: 600; color: #f8fafc;">
             Plan Actif: <?= $floor === 'rc' ? 'Rez-de-chaussée' : '1er Étage' ?> 
-            <span style="font-size:13px; color:var(--text-muted); font-weight:normal; margin-left:10px;">(<?= ($cols * 50) ?>px × <?= ($rows * 50) ?>px)</span>
+            <span style="font-size:13px; color:#94a3b8; font-weight:normal; margin-left:10px;">(<?= ($cols * 50) ?>px × <?= ($rows * 50) ?>px)</span>
         </h2>
 
-        <div class="grid-stage">
-            <div class="grid-container" id="frontGrid" style="grid-template-columns: repeat(<?= $cols ?>, 50px); grid-template-rows: repeat(<?= $rows ?>, 50px);">
+        <div class="grid-stage" id="gridStage">
+            <div class="grid-container" id="frontGrid" style="grid-template-columns: repeat(<?= $cols ?>, 1fr); grid-template-rows: repeat(<?= $rows ?>, 1fr); width: <?= $cols * 50 ?>px; height: <?= $rows * 50 ?>px;">
                 <?php
                 for ($r = 1; $r <= $rows; $r++) {
                     for ($c = 1; $c <= $cols; $c++) {
                         $cellKey = "{$r}_{$c}";
+                        $computedX = ($c - 1) * 50;
+                        $computedY = ($r - 1) * 50;
+                        
                         echo "<div class='grid-item' data-row='$r' data-col='$c'>";
+                        echo "<div class='sub-grid-cell'><sub>X:$computedX</sub><sub>Y:$computedY</sub></div>";
+                        echo "<div class='front-cell-content'>";
                         
                         if (isset($elementsPositionnes[$cellKey])) {
                             $el = $elementsPositionnes[$cellKey];
                             echo "<div class='placed-element type-{$el['type']}'>";
                             echo "<span>" . htmlspecialchars($el['label']) . "</span>";
-                            echo "<button type='button' class='delete-item-trigger'><i class='fa-solid fa-trash'></i></button>";
+                            echo "<button class='delete-item-trigger' title='Supprimer'>🗑️</button>";
                             echo "</div>";
-                        } else {
-                            $computedX = ($c - 1) * 50;
-                            $computedY = ($r - 1) * 50;
-                            echo "<span>X:$computedX</span><span>Y:$computedY</span>";
                         }
+                        
+                        echo "</div>";
                         echo "</div>";
                     }
                 }
                 ?>
             </div>
         </div>
+
+        <div class="zoom-controls">
+            <button id="zoom-in" title="Zoom In">➕</button>
+            <button id="zoom-out" title="Zoom Out">➖</button>
+            <button id="zoom-reset" title="Réinitialiser">🔄</button>
+        </div>
     </div>
 
     <div class="control-sidebar">
-        <?php if ($canAdjustDimensions): ?>
-            <h3><i class="fa-solid fa-arrows-to-dot"></i> Dimensions Grille</h3>
-            <div style="display:flex; flex-direction:column; gap:10px;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span style="font-size:13px;">Lignes (<?= $rows ?>)</span>
-                    <div style="display:flex; gap:4px;">
-                        <a href="?rows=<?= $rows - 1 ?>&cols=<?= $cols ?>&floor=<?= $floor ?>" class="control-btn" style="padding:4px 10px; width:auto;">-</a>
-                        <a href="?rows=<?= $rows + 1 ?>&cols=<?= $cols ?>&floor=<?= $floor ?>" class="control-btn" style="padding:4px 10px; width:auto;">+</a>
-                    </div>
-                </div>
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span style="font-size:13px;">Colonnes (<?= $cols ?>)</span>
-                    <div style="display:flex; gap:4px;">
-                        <a href="?rows=<?= $rows ?>&cols=<?= $cols - 1 ?>&floor=<?= $floor ?>" class="control-btn" style="padding:4px 10px; width:auto;">-</a>
-                        <a href="?rows=<?= $rows ?>&cols=<?= $cols + 1 ?>&floor=<?= $floor ?>" class="control-btn" style="padding:4px 10px; width:auto;">+</a>
-                    </div>
-                </div>
-            </div>
-        <?php endif; ?>
-
-        <?php if ($canMergeCells): ?>
-            <h3><i class="fa-solid fa-object-group"></i> Actions Zones</h3>
-            <div style="display: flex; flex-direction: column; gap: 8px;">
-                <button type="button" id="btnMergeCells" class="merge-action-btn"><i class="fa-solid fa-compress"></i> Fusionner Sélection</button>
-                <button type="button" id="btnUnmergeMode" class="merge-action-btn" style="color:#f87171;"><i class="fa-solid fa-expand"></i> Dissocier Cellule</button>
-            </div>
-        <?php endif; ?>
-
-        <h3><i class="fa-solid fa-layer-group"></i> Étages</h3>
-        <nav style="display: flex; flex-direction: column; gap: 4px;">
-            <a href="?rows=<?= $rows ?>&cols=<?= $cols ?>&floor=rc" class="uml-link <?= $floor === 'rc' ? 'active' : '' ?>">
-                <i class="fa-solid fa-house"></i> Rez-de-chaussée (0)
-            </a>
-            <a href="?rows=<?= $rows ?>&cols=<?= $cols ?>&floor=e1" class="uml-link <?= $floor === 'e1' ? 'active' : '' ?>">
-                <i class="fa-solid fa-building"></i> 1er étage (1)
-            </a>
-        </nav>
+        <h3>Configuration</h3>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+            <a href="?floor=rc&rows=<?= $rows ?>&cols=<?= $cols ?>" class="control-btn <?= $floor === 'rc' ? 'active' : '' ?>">Rez-de-chaussée</a>
+            <a href="?floor=e1&rows=<?= $rows ?>&cols=<?= $cols ?>" class="control-btn <?= $floor === 'e1' ? 'active' : '' ?>">1er Étage</a>
+        </div>
     </div>
 </div>
 
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-    const currentFloor = (new URLSearchParams(window.location.search)).get('floor') || 'rc';
-    let isMergeMode = false, isUnmergeMode = false, selectedCells = [];
+<script src="script.js"></script>
 
-    const catalogSearch = document.getElementById('catalogSearch');
-    const toast = document.getElementById('toast-notification');
-
-    function showToast(msg, isError = false) {
-        toast.textContent = msg;
-        toast.style.cssText = `position:fixed; bottom:20px; right:20px; padding:12px 20px; border-radius:8px; color:white; font-size:13px; font-weight:500; box-shadow:0 10px 15px -3px rgba(0,0,0,0.3); display:block; background:${isError ? '#ef4444' : '#10b981'}`;
-        setTimeout(() => { toast.style.display = 'none'; }, 3000);
-    }
-
-    function filterCatalog() {
-        const searchTerm = catalogSearch.value.toLowerCase().trim();
-        const groups = document.querySelectorAll('.catalog-group');
-
-        groups.forEach(group => {
-            const items = group.querySelectorAll('.catalog-item-wrapper');
-            let visibleInGroupCount = 0;
-
-            items.forEach(item => {
-                const matchesSearch = item.textContent.toLowerCase().includes(searchTerm);
-                if (matchesSearch) {
-                    item.style.display = '';
-                    visibleInGroupCount++;
-                } else {
-                    item.style.display = 'none';
-                }
-            });
-
-            if (searchTerm !== '' && visibleInGroupCount > 0) {
-                group.setAttribute('open', 'true');
-            }
-            group.style.display = (visibleInGroupCount > 0 || searchTerm === '') ? '' : 'none';
-        });
-    }
-    if (catalogSearch) {
-        catalogSearch.addEventListener('input', filterCatalog);
-    }
-
-    document.querySelectorAll('.drag-item').forEach(item => {
-        item.addEventListener('dragstart', function (e) {
-            e.dataTransfer.setData('text/plain', JSON.stringify({
-                id: this.getAttribute('data-id'),
-                label: this.getAttribute('data-label'),
-                type: this.getAttribute('data-type')
-            }));
-        });
-    });
-
-    document.querySelectorAll('.grid-item').forEach(cell => {
-        cell.addEventListener('dragover', function (e) {
-            if (!this.querySelector('.placed-element') && !isMergeMode && !isUnmergeMode) {
-                e.preventDefault();
-                this.classList.add('drag-hover');
-            }
-        });
-
-        cell.addEventListener('dragleave', function () { this.classList.remove('drag-hover'); });
-
-        cell.addEventListener('drop', function (e) {
-            e.preventDefault();
-            this.classList.remove('drag-hover');
-            const data = JSON.parse(e.dataTransfer.getData('text/plain'));
-
-            const formData = new FormData();
-            formData.append('action_position', '1');
-            formData.append('col_idx', this.getAttribute('data-col'));
-            formData.append('row_idx', this.getAttribute('data-row'));
-            formData.append('current_floor', currentFloor);
-            
-            if (data.type === 'Local') formData.append('id_local', data.id);
-            else if (data.type === 'Voiture') formData.append('matricule_voiture', data.id);
-            else formData.append('id_magasin', data.id);
-
-            fetch(window.location.href, { method: 'POST', body: formData })
-            .then(res => res.json())
-            .then(res => {
-                if(res.status === 'success') {
-                    showToast(res.message);
-                    this.innerHTML = `<div class="placed-element type-${data.type}"><span>[${data.type}] ${data.label}</span><button type="button" class="delete-item-trigger"><i class="fa-solid fa-trash"></i></button></div>`;
-                    attachDeleteEvent(this.querySelector('.delete-item-trigger'));
-                } else showToast(res.message, true);
-            });
-        });
-    });
-
-    function attachDeleteEvent(btn) {
-        if(!btn) return;
-        btn.addEventListener('click', function (e) {
-            e.stopPropagation();
-            const cell = this.closest('.grid-item');
-            if (!confirm("Supprimer cet élément ?")) return;
-
-            const formData = new FormData();
-            formData.append('action_delete_item', '1');
-            formData.append('col_idx', cell.getAttribute('data-col'));
-            formData.append('row_idx', cell.getAttribute('data-row'));
-            formData.append('current_floor', currentFloor);
-
-            fetch(window.location.href, { method: 'POST', body: formData })
-            .then(res => res.json())
-            .then(res => {
-                if (res.status === 'success') {
-                    showToast(res.message);
-                    const cx = (cell.getAttribute('data-col') - 1) * 50;
-                    const cy = (cell.getAttribute('data-row') - 1) * 50;
-                    cell.innerHTML = `<span>X:${cx}</span><span>Y:${cy}</span>`;
-                } else showToast(res.message, true);
-            });
-        });
-    }
-    document.querySelectorAll('.delete-item-trigger').forEach(btn => attachDeleteEvent(btn));
-
-    const btnMerge = document.getElementById('btnMergeCells');
-    const btnUnmerge = document.getElementById('btnUnmergeMode');
-
-    if(btnMerge) {
-        btnMerge.addEventListener('click', () => {
-            isMergeMode = !isMergeMode; isUnmergeMode = false;
-            resetSelection();
-            btnMerge.style.background = isMergeMode ? '#2563eb' : '';
-            if(btnUnmerge) btnUnmerge.style.background = '';
-        });
-    }
-
-    if(btnUnmerge) {
-        btnUnmerge.addEventListener('click', () => {
-            isUnmergeMode = !isUnmergeMode; isMergeMode = false;
-            resetSelection();
-            btnUnmerge.style.background = isUnmergeMode ? '#ef4444' : '';
-            if(btnMerge) btnMerge.style.background = '';
-        });
-    }
-
-    document.querySelectorAll('.grid-item').forEach(cell => {
-        cell.addEventListener('click', function() {
-            if (isMergeMode) {
-                if (this.querySelector('.placed-element')) return;
-                if (selectedCells.includes(this)) {
-                    this.style.background = '';
-                    selectedCells = selectedCells.filter(c => c !== this);
-                } else {
-                    this.style.background = 'rgba(59, 130, 246, 0.4)';
-                    selectedCells.push(this);
-                }
-                if (selectedCells.length >= 2) handleMergeExecution();
-            } else if (isUnmergeMode && this.style.gridArea) {
-                handleUnmergeExecution(this);
-            }
-        });
-    });
-
-    function resetSelection() {
-        selectedCells.forEach(c => c.style.background = '');
-        selectedCells = [];
-    }
-
-    function handleMergeExecution() {
-        const title = prompt("Nom de la zone fusionnée :");
-        if(!title) { resetSelection(); return; }
-        let minR = 99, maxR = 0, minC = 99, maxC = 0;
-        selectedCells.forEach(c => {
-            const r = parseInt(c.getAttribute('data-row')), col = parseInt(c.getAttribute('data-col'));
-            if(r < minR) minR = r; if(r > maxR) maxR = r;
-            if(col < minC) minC = col; if(col > maxC) maxC = col;
-        });
-        const rootCell = selectedCells.find(c => parseInt(c.getAttribute('data-row')) === minR && parseInt(c.getAttribute('data-col')) === minC);
-        if(rootCell) {
-            rootCell.style.gridArea = `${minR} / ${minC} / ${maxR + 1} / ${maxC + 1}`;
-            rootCell.style.background = '#334155';
-            rootCell.innerHTML = `<div style="color:white; font-weight:bold; font-size:11px; text-align:center;">${title}</div>`;
-            selectedCells.forEach(c => { if(c !== rootCell) c.style.display = 'none'; });
-        }
-        isMergeMode = false; btnMerge.style.background = ''; resetSelection();
-    }
-
-    function handleUnmergeExecution(cell) {
-        const area = cell.style.gridArea.split('/');
-        const rStart = parseInt(area[0]), cStart = parseInt(area[1]), rEnd = parseInt(area[2]), cEnd = parseInt(area[3]);
-        document.querySelectorAll('.grid-item').forEach(c => {
-            const r = parseInt(c.getAttribute('data-row')), col = parseInt(c.getAttribute('data-col'));
-            if(r >= rStart && r < rEnd && col >= cStart && col < cEnd) {
-                c.style.display = ''; c.style.gridArea = ''; c.style.background = '';
-                c.innerHTML = `<span>X:${(col-1)*50}</span><span>Y:${(r-1)*50}</span>`;
-            }
-        });
-        isUnmergeMode = false; btnUnmerge.style.background = '';
-    }
-});
-</script>
-
-<?php require_once '../includes/footer.php'; ?>
+<?php
+require_once '../includes/footer.php';
+?>

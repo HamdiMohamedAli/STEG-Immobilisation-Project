@@ -5,6 +5,7 @@
 -- Host: 127.0.0.1
 -- Generation Time: Jun 22, 2026 at 10:32 AM
 -- Server version: 10.4.32-MariaDB
+
 -- PHP Version: 8.2.12
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
@@ -159,7 +160,7 @@ CREATE TABLE `journal_logs` (
   PRIMARY KEY (`idLog`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- (Insertions removed successfully)
+-- Logs vidés avec succès
 
 -- --------------------------------------------------------
 
@@ -335,7 +336,7 @@ CREATE TABLE `pannes` (
 --
 
 INSERT INTO `pannes` (`idPanne`, `description`, `dateDeclaration`, `gravite`, `idUtilisateur`, `idEquip`, `matriculeVoiture`) VALUES
-(1, 'Surchauffe excessive et coupure automatique', '2026-06-10', 'Majeure', 1114, 2, NULL);
+(1, 'Surchauffe excessive et coupure automatique', '2026-06-10', 'Majeure', 11140, 2, NULL);
 
 -- --------------------------------------------------------
 
@@ -404,15 +405,12 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`idUtilisateur`, `nom`, `email`, `tel`, `motDePasse`, `idProfil`, `idLocalAssigne`, `statut`) VALUES
-(1111, 'Mohamed Ali Hamdi', 'admin@steg.com.tn', '99858256', '$2y$10$TuCLeTceDcIfu6nmAkaGeeM6TiJXjoQajhxYy5UsW2ECiELQVVstu', 1, NULL, 1),
-(1112, 'Sami Ben Ali', 's.benali@steg.com.tn', '98123456', '$2y$10$TuCLeTceDcIfu6nmAkaGeeM6TiJXjoQajhxYy5UsW2ECiELQVVstu', 2, NULL, 1),
-(1113, 'Amel Trabelsi', 'a.trabelsi@steg.com.tn', '22345678', '$2y$10$TuCLeTceDcIfu6nmAkaGeeM6TiJXjoQajhxYy5UsW2ECiELQVVstu', 5, NULL, 1),
-(1114, 'Wajdi Mansour', 'w.mansour@steg.com.tn', '55443322', '$2y$10$TuCLeTceDcIfu6nmAkaGeeM6TiJXjoQajhxYy5UsW2ECiELQVVstu', 4, NULL, 1),
-(1115, 'Yassine Mansour', 'y.mansour@steg.com.tn', '98450123', '$2y$10$TuCLeTceDcIfu6nmAkaGeeM6TiJXjoQajhxYy5UsW2ECiELQVVstu', 2, NULL, 1),
-(1116, 'Sonia Ben Youssef', 's.benyoussef@steg.com.tn', '22114477', '$2y$10$TuCLeTceDcIfu6nmAkaGeeM6TiJXjoQajhxYy5UsW2ECiELQVVstu', 3, NULL, 1),
-(1117, 'Karim Dridi', 'k.dridi@steg.com.tn', '55889900', '$2y$10$TuCLeTceDcIfu6nmAkaGeeM6TiJXjoQajhxYy5UsW2ECiELQVVstu', 4, NULL, 1),
-(1118, 'Anis Chebbi', 'a.chebbi@steg.com.tn', '97552233', '$2y$10$TuCLeTceDcIfu6nmAkaGeeM6TiJXjoQajhxYy5UsW2ECiELQVVstu', 5, NULL, 1),
-(1119, 'Leila Marzouki', 'l.marzouki@steg.com.tn', '20336699', '$2y$10$TuCLeTceDcIfu6nmAkaGeeM6TiJXjoQajhxYy5UsW2ECiELQVVstu', 6, NULL, 1);
+(11110, 'Mohamed Ali Hamdi', 'admin@steg.com.tn', '99858256', '12345', 1, NULL, 1),
+(11120, 'Sami Ben Ali', 's.benali@steg.com.tn', '98123456', '12345', 2, NULL, 1),
+(11160, 'Sonia Ben Youssef', 's.benyoussef@steg.com.tn', '22114477', '12345', 3, NULL, 1),
+(11140, 'Wajdi Mansour', 'w.mansour@steg.com.tn', '55443322', '12345', 4, NULL, 1),
+(11130, 'Amel Trabelsi', 'a.trabelsi@steg.com.tn', '22345678', '12345', 5, NULL, 1),
+(11190, 'Leila Marzouki', 'l.marzouki@steg.com.tn', '20336699', '12345', 6, NULL, 1);
 
 -- --------------------------------------------------------
 

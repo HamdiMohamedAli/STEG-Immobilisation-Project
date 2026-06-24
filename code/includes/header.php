@@ -8,7 +8,7 @@ if (!isset($_SESSION['idUtilisateur'])) {
     exit();
 }
 
-$userIdFormate = str_pad($_SESSION['idUtilisateur'], 4, '0', STR_PAD_LEFT);
+$userIdFormate = str_pad($_SESSION['idUtilisateur'], 5, '0', STR_PAD_LEFT);
 ?>
 <!DOCTYPE html>
 <html lang="fr">

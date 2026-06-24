@@ -230,7 +230,7 @@ try {
                                     <td><strong><?= htmlspecialchars($bien['typeEquip']) ?></strong></td>
                                     <td class="btn-action" style="white-space: nowrap; display: flex; align-items: center;">
                                         <a href="<?= htmlspecialchars($current_page) ?>?edit=<?= urlencode($bien['idEquip']) ?>" class="btn-action edit" title="Modifier" style="color: var(--warning-color); margin-right: 15px; font-size: 1.1rem; text-decoration: none;">
-                                            <i class="fa-solid fa-pen-to-square"></i>
+                                            <i class="fa-solid fa-pen-to-square" style="color: #ffc107; font-size: 1.1rem;"></i>
                                         </a>
                                         
                                         <form action="<?= htmlspecialchars($current_page) ?>" method="POST" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer définitivement l\'équipement <?= htmlspecialchars(addslashes($bien['libelle'])) ?> ?');" style="margin: 0; padding: 0;">

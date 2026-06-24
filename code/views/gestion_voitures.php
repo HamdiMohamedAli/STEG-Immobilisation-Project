@@ -268,7 +268,7 @@ try {
                                     </td>
                                     <td class="btn-action" style="white-space: nowrap; width: 10%;">
                                         <a href="<?= $current_page ?>?edit=<?= urlencode($voiture['matricule']) ?>" class="btn-action edit" title="Modifier" style="color: #ca8a04; margin-right: 12px; font-size: 1.1rem; text-decoration: none;">
-                                            <i class="fa-solid fa-pen-to-square"></i>
+                                            <i class="fa-solid fa-pen-to-square" style="color: #ffc107; font-size: 1.1rem;"></i>
                                         </a>
                                         <a href="<?= $current_page ?>?delete=<?= urlencode($voiture['matricule']) ?>" class="btn-action delete" title="Supprimer" onclick="return confirm('Êtes-vous sûr de vouloir retirer définitivement du parc le véhicule <?= htmlspecialchars($voiture['marque'] . ' ' . $voiture['modele']) ?> (<?= htmlspecialchars($voiture['matricule']) ?>) ?');" style="color: #dc2626; font-size: 1.1rem; text-decoration: none;">
                                             <i class="fa-solid fa-trash-can"></i>

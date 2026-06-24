@@ -15,7 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $idUtilisateur = trim($_POST['idUtilisateur']);
     $password      = trim($_POST['password']);
 
-    if (preg_match('/^\d{4}$/', $idUtilisateur) && preg_match('/^\d{4}$/', $password)) {
+    if (preg_match('/^\d{5}$/', $idUtilisateur) && preg_match('/^\d{5}$/', $password)) {
         try {
             $stmt = $pdo->prepare("SELECT * FROM users WHERE idUtilisateur = ?");
             $stmt->execute([$idUtilisateur]);
@@ -23,7 +23,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if ($utilisateur && password_verify($password, $utilisateur['motDePasse'])) {
                 
-                // MODIFICATION : Vérification du statut du compte (1 = Actif)
                 if ((int)$utilisateur['statut'] !== 1) {
                     try {
                         $stmtLog = $pdo->prepare("INSERT INTO journal_logs (idUtilisateur, action, typeAction, cibleEntite, idCible) VALUES (?, ?, ?, ?, ?)");
@@ -38,7 +37,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     $error = "Votre compte est inactif ou a été suspendu. Veuillez contacter votre administrateur.";
                 } else {
-                    // Le compte est actif, on procède à la connexion
                     $stmt = $pdo->prepare("SELECT * FROM profils WHERE idProfil = ?");
                     $stmt->execute([$utilisateur['idProfil']]);
                     $profil = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -58,16 +56,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             "Utilisateur",
                             "ID: {$_SESSION['idUtilisateur']} | Nom: {$_SESSION['nom']} | Rôle: {$_SESSION['labelProfil']}"
                         ]);
-                    } catch (PDOException $e) {
-                        // Log failure is non-blocking
-                    }
+                    } catch (PDOException $e) {}
 
                     header('Location: main.php');
                     exit();
                 }
 
             } else {
-                // Log failed attempt (wrong password or unknown ID)
                 try {
                     $stmtLog = $pdo->prepare("INSERT INTO journal_logs (idUtilisateur, action, typeAction, cibleEntite, idCible) VALUES (?, ?, ?, ?, ?)");
                     $stmtLog->execute([
@@ -85,7 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = "Une erreur serveur est survenue. Veuillez réessayer plus tard.";
         }
     } else {
-        $error = "L'identifiant (ID) et le mot de passe doivent comporter exactement 4 chiffres.";
+        $error = "L'identifiant (ID) et le mot de passe doivent comporter exactement 5 chiffres.";
     }
 }
 ?>
@@ -112,15 +107,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="form-group">
                 <label for="idUtilisateur">Identifiant</label>
                 <input type="text" id="idUtilisateur" name="idUtilisateur" required
-                       pattern="\d{4}" maxlength="4" minlength="4"
-                       inputmode="numeric" placeholder="Ex: 0000">
+                       pattern="\d{5}" maxlength="5" minlength="5"
+                       inputmode="numeric" placeholder="Ex: 00000">
             </div>
 
             <div class="form-group">
                 <label for="password">Mot de passe</label>
                 <input type="password" id="password" name="password" required
-                       pattern="\d{4}" maxlength="4" minlength="4"
-                       inputmode="numeric" placeholder="••••">
+                       pattern="\d{5}" maxlength="5" minlength="5"
+                       inputmode="numeric" placeholder="•••••">
             </div>
 
             <button type="submit" class="btn btn-primary btn-block">Se connecter</button>
