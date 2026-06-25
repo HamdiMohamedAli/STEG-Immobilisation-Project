@@ -16,7 +16,7 @@ if (isset($_SESSION['idUtilisateur'])) {
             "ID: {$_SESSION['idUtilisateur']} | Nom: {$_SESSION['nom']} | Rôle: {$_SESSION['labelProfil']}"
         ]);
     } catch (PDOException $e) {
-        // Log failure is non-blocking
+        
     }
 }
 

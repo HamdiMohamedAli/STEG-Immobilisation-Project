@@ -127,7 +127,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <label for="idUtilisateur">Identifiant</label>
                 <input type="text" id="idUtilisateur" name="idUtilisateur" required
                        pattern="\d{5}" maxlength="5" minlength="5"
-                       inputmode="numeric" placeholder="Ex: 00001">
+                       inputmode="numeric" placeholder="Ex: 00000">
             </div>
 
             <div class="form-group">
