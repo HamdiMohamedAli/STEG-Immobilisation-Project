@@ -56,7 +56,7 @@ function initPlanCatalog() {
 
     if (btnMergeCells)   btnMergeCells.setAttribute('disabled', 'true');
     if (btnUnmergeMode) btnUnmergeMode.setAttribute('disabled', 'true');
-    if (deleteBtn)      deleteBtn.setAttribute('disabled', 'true');
+    if (deleteBtn)       deleteBtn.setAttribute('disabled', 'true');
 
     gridItems.forEach(cell => {
         const frontContent = cell.querySelector('.front-cell-content');
