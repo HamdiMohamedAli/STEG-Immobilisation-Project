@@ -45,18 +45,49 @@ function initPlanCatalog() {
         });
     });
 
-    let selectedCells = [];          
-    let cellToUnmerge = null;
+    let selectedCells   = [];
+    let cellToUnmerge   = null;
+    let lastClickedCell = null;
     const SELECTION_CLASS = 'selected';
 
-    const gridItems       = document.querySelectorAll('.grid-item');
-    const btnMergeCells   = document.getElementById('btnMergeCells');
-    const btnUnmergeMode  = document.getElementById('btnMenuUnmergeMode');
-    const deleteBtn       = document.getElementById('deleteSelectedBtn');
+    const gridItems      = document.querySelectorAll('.grid-item');
+    const btnMergeCells  = document.getElementById('btnMergeCells');
+    const btnUnmergeMode = document.getElementById('btnMenuUnmergeMode');
+    const deleteBtn      = document.getElementById('deleteSelectedBtn');
 
-    if (btnMergeCells)   btnMergeCells.setAttribute('disabled', 'true');
+    if (btnMergeCells)  btnMergeCells.setAttribute('disabled', 'true');
     if (btnUnmergeMode) btnUnmergeMode.setAttribute('disabled', 'true');
-    if (deleteBtn)       deleteBtn.setAttribute('disabled', 'true');
+    if (deleteBtn)      deleteBtn.setAttribute('disabled', 'true');
+
+    function getSelectedCount() {
+        return document.querySelectorAll(`.grid-item.${SELECTION_CLASS}`).length;
+    }
+
+    function updateSelectionUI() {
+        const count = getSelectedCount();
+        if (count > 0) {
+            showToast(`${count} élément(s) sélectionné(s).`, false, true);
+            if (deleteBtn) deleteBtn.removeAttribute('disabled');
+        } else {
+            if (deleteBtn) deleteBtn.setAttribute('disabled', 'true');
+            const toast = document.getElementById('toast-notification');
+            if (toast) toast.style.display = 'none';
+        }
+    }
+
+    function getAllPlacedCells() {
+        return Array.from(gridItems).filter(c => c.querySelector('.placed-element'));
+    }
+
+    function getPlacedCellsBetween(a, b) {
+        const placed = getAllPlacedCells();
+        const idxA   = placed.indexOf(a);
+        const idxB   = placed.indexOf(b);
+        if (idxA === -1 || idxB === -1) return [b];
+        const start = Math.min(idxA, idxB);
+        const end   = Math.max(idxA, idxB);
+        return placed.slice(start, end + 1);
+    }
 
     gridItems.forEach(cell => {
         const frontContent = cell.querySelector('.front-cell-content');
@@ -96,9 +127,9 @@ function initPlanCatalog() {
                 formData.append('row_idx', rowIdx);
                 formData.append('current_floor', window.PLAN_CONFIG?.currentFloor ?? 'rc');
 
-                if (data.type === 'Local')         { formData.append('id_local',          data.id); }
-                else if (data.type === 'Voiture')  { formData.append('matricule_voiture',  data.id); }
-                else                               { formData.append('id_magasin',          data.id); }
+                if (data.type === 'Local')        { formData.append('id_local',         data.id); }
+                else if (data.type === 'Voiture') { formData.append('matricule_voiture', data.id); }
+                else                              { formData.append('id_magasin',         data.id); }
 
                 fetch(window.location.href, { method: 'POST', body: formData })
                     .then(res => res.json())
@@ -146,7 +177,6 @@ function initPlanCatalog() {
                 if (cellToUnmerge && cellToUnmerge !== this) {
                     cellToUnmerge.classList.remove('selected-for-unmerge');
                 }
-
                 if (cellToUnmerge === this) {
                     this.classList.remove('selected-for-unmerge');
                     cellToUnmerge = null;
@@ -160,24 +190,29 @@ function initPlanCatalog() {
             }
 
             if (this.querySelector('.placed-element')) {
-                if (!e.ctrlKey && !e.metaKey) {
-                    document.querySelectorAll(`.grid-item.${SELECTION_CLASS}`).forEach(item => {
-                        if (item !== this) item.classList.remove(SELECTION_CLASS);
-                    });
-                }
-                this.classList.toggle(SELECTION_CLASS);
-                
-                const count = document.querySelectorAll(`.grid-item.${SELECTION_CLASS}`).length;
-                if (count > 0) {
-                    showToast(`${count} élément(s) sélectionné(s).`, false, true);
-                    if (deleteBtn) deleteBtn.removeAttribute('disabled');
+                if (e.shiftKey && lastClickedCell) {
+                    const range = getPlacedCellsBetween(lastClickedCell, this);
+                    range.forEach(c => c.classList.add(SELECTION_CLASS));
+                } else if (e.ctrlKey || e.metaKey) {
+                    this.classList.toggle(SELECTION_CLASS);
+                    lastClickedCell = this;
                 } else {
-                    if (deleteBtn) deleteBtn.setAttribute('disabled', 'true');
-                    const toast = document.getElementById('toast-notification');
-                    if (toast) toast.style.display = 'none';
+                    const isAlreadyOnlySelected =
+                        this.classList.contains(SELECTION_CLASS) && getSelectedCount() === 1;
+                    document.querySelectorAll(`.grid-item.${SELECTION_CLASS}`).forEach(c => c.classList.remove(SELECTION_CLASS));
+                    if (!isAlreadyOnlySelected) {
+                        this.classList.add(SELECTION_CLASS);
+                    }
+                    lastClickedCell = this;
                 }
+
+                updateSelectionUI();
                 return;
             }
+
+            document.querySelectorAll(`.grid-item.${SELECTION_CLASS}`).forEach(c => c.classList.remove(SELECTION_CLASS));
+            lastClickedCell = null;
+            updateSelectionUI();
 
             if (selectedCells.includes(this)) {
                 this.classList.remove('selected-for-merge');
@@ -195,6 +230,20 @@ function initPlanCatalog() {
                 }
             }
         });
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            document.querySelectorAll(`.grid-item.${SELECTION_CLASS}`).forEach(c => c.classList.remove(SELECTION_CLASS));
+            lastClickedCell = null;
+            updateSelectionUI();
+        }
+
+        if ((e.key === 'a' || e.key === 'A') && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            getAllPlacedCells().forEach(c => c.classList.add(SELECTION_CLASS));
+            updateSelectionUI();
+        }
     });
 
     if (btnMergeCells) {
@@ -233,8 +282,8 @@ function initPlanCatalog() {
             }
 
             const backendFloor = new URLSearchParams(window.location.search).get('floor') || 'rc';
-            let   completed    = 0;
-            let   errors       = 0;
+            let completed = 0;
+            let errors    = 0;
 
             selectedItems.forEach(item => {
                 const row = item.getAttribute('data-row');
@@ -242,9 +291,9 @@ function initPlanCatalog() {
 
                 const formData = new FormData();
                 formData.append('action_delete_item', '1');
-                formData.append('row_idx',       row);
-                formData.append('col_idx',        col);
-                formData.append('current_floor',  backendFloor);
+                formData.append('row_idx',      row);
+                formData.append('col_idx',       col);
+                formData.append('current_floor', backendFloor);
 
                 fetch(window.location.href, { method: 'POST', body: formData })
                     .then(res => res.json())
@@ -265,8 +314,8 @@ function initPlanCatalog() {
                     .finally(() => {
                         completed++;
                         if (completed === selectedItems.length) {
+                            lastClickedCell = null;
                             deleteBtn.setAttribute('disabled', 'true');
-                            
                             const toast = document.getElementById('toast-notification');
                             if (toast) toast.style.display = 'none';
 
@@ -283,6 +332,8 @@ function initPlanCatalog() {
 }
 
 function decrementStock(itemId, itemType) {
+    if (itemType === 'Local') return;
+
     const dragItem = document.querySelector(
         `.drag-item[data-id="${CSS.escape(String(itemId))}"][data-type="${itemType}"]`
     );
@@ -307,8 +358,8 @@ function decrementStock(itemId, itemType) {
 
 function disableDragItem(dragItem) {
     dragItem.setAttribute('draggable', 'false');
-    dragItem.style.opacity  = '0.4';
-    dragItem.style.cursor   = 'not-allowed';
+    dragItem.style.opacity       = '0.4';
+    dragItem.style.cursor        = 'not-allowed';
     dragItem.style.pointerEvents = 'none';
 }
 
@@ -317,21 +368,20 @@ function initGridGestures() {
     const grid  = document.getElementById('frontGrid');
     if (!stage || !grid) return { fitToStage: () => {} };
 
-    const btnIn    = document.getElementById('zoom-in');
-    const btnOut   = document.getElementById('zoom-out');
-    const btnReset = document.getElementById('zoom-reset');
+    const btnIn     = document.getElementById('zoom-in');
+    const btnOut    = document.getElementById('zoom-out');
+    const btnReset  = document.getElementById('zoom-reset');
     const deleteBtn = document.getElementById('deleteSelectedBtn');
 
     let scale      = 1;
     let translateX = 0;
     let translateY = 0;
     let isPanning  = false;
-    
     let startX     = 0;
     let startY     = 0;
     let mDownX     = 0;
     let mDownY     = 0;
-    window.isDraggingGrid = false; 
+    window.isDraggingGrid = false;
 
     const minScale = 0.2;
     const maxScale = 5;
@@ -341,16 +391,16 @@ function initGridGestures() {
     }
 
     function fitToStage() {
-        const stageW  = stage.clientWidth  || stage.offsetWidth;
-        const stageH  = stage.clientHeight || stage.offsetHeight;
-        const gridW   = grid.offsetWidth;
-        const gridH   = grid.offsetHeight;
+        const stageW = stage.clientWidth  || stage.offsetWidth;
+        const stageH = stage.clientHeight || stage.offsetHeight;
+        const gridW  = grid.offsetWidth;
+        const gridH  = grid.offsetHeight;
         if (!gridW || !gridH) return;
 
-        const padding = 32; 
+        const padding = 32;
         const scaleX  = (stageW - padding) / gridW;
         const scaleY  = (stageH - padding) / gridH;
-        scale         = Math.min(scaleX, scaleY, 1); 
+        scale         = Math.min(scaleX, scaleY, 1);
         scale         = Math.max(minScale, scale);
 
         translateX = 0;
@@ -362,8 +412,8 @@ function initGridGestures() {
         e.preventDefault();
         e.stopPropagation();
 
-        const zoomIntensity  = 0.1;
-        const previousScale  = scale;
+        const zoomIntensity = 0.1;
+        const previousScale = scale;
 
         scale = e.deltaY < 0
             ? Math.min(maxScale, scale + zoomIntensity)
@@ -390,18 +440,16 @@ function initGridGestures() {
 
     window.addEventListener('mousemove', (e) => {
         if (!isPanning) return;
-        
         if (Math.abs(e.clientX - mDownX) > 5 || Math.abs(e.clientY - mDownY) > 5) {
             window.isDraggingGrid = true;
         }
-
         translateX = e.clientX - startX;
         translateY = e.clientY - startY;
         applyTransform();
     });
 
-    window.addEventListener('mouseup', () => { 
-        isPanning = false; 
+    window.addEventListener('mouseup', () => {
+        isPanning = false;
         setTimeout(() => { window.isDraggingGrid = false; }, 50);
     });
 
@@ -444,8 +492,8 @@ function initUmlFeatures() {
             e.preventDefault();
             links.forEach(l => l.classList.remove('active'));
             this.classList.add('active');
-            displayImage.src      = this.getAttribute('href');
-            displayImage.onload   = () => ctrl.reset();
+            displayImage.src    = this.getAttribute('href');
+            displayImage.onload = () => ctrl.reset();
         });
     });
 
@@ -512,9 +560,9 @@ function processMergeAction(cells, callback) {
         return;
     }
 
-    const finalName = `Zone ${minRow}-${minCol}`;
-    const rowSpan   = maxRow - minRow + 1;
-    const colSpan   = maxCol - minCol + 1;
+    const finalName  = `Zone ${minRow}-${minCol}`;
+    const rowSpan    = maxRow - minRow + 1;
+    const colSpan    = maxCol - minCol + 1;
     const targetCell = cells.find(
         c => parseInt(c.getAttribute('data-row'), 10) === minRow &&
              parseInt(c.getAttribute('data-col'), 10) === minCol
@@ -557,8 +605,8 @@ function processMergeAction(cells, callback) {
 }
 
 function processUnmergeAction(cell, callback) {
-    const row   = parseInt(cell.getAttribute('data-row'),    10);
-    const col   = parseInt(cell.getAttribute('data-col'),    10);
+    const row   = parseInt(cell.getAttribute('data-row'),          10);
+    const col   = parseInt(cell.getAttribute('data-col'),          10);
     const rSpan = parseInt(cell.getAttribute('data-rspan') || '1', 10);
     const cSpan = parseInt(cell.getAttribute('data-cspan') || '1', 10);
 
@@ -597,9 +645,7 @@ function processUnmergeAction(cell, callback) {
             }
         })
         .catch(() => showToast("Erreur réseau lors de la dissociation.", true))
-        .finally(() => {
-            if (callback) callback();
-        });
+        .finally(() => { if (callback) callback(); });
 }
 
 function checkEmptyCatalog() {
@@ -661,7 +707,7 @@ function escapeHtml(text) {
 function showToast(message, isError = false, isPermanent = false) {
     const toast = document.getElementById('toast-notification');
     if (!toast) return;
-    
+
     toast.textContent = message;
     toast.style.cssText = `
         position: fixed; bottom: 20px; right: 20px; z-index: 9999;
@@ -670,10 +716,22 @@ function showToast(message, isError = false, isPermanent = false) {
         box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         background: ${isError ? '#ef4444' : '#10b981'};
     `;
-    
+
     clearTimeout(toast._hideTimer);
-    
+
     if (!isPermanent) {
         toast._hideTimer = setTimeout(() => { toast.style.display = 'none'; }, 3500);
     }
 }
+
+
+/*
+
+Three things added, all standard OS-style behaviour:
+Click — selects one item, deselects everything else. Clicking it again deselects it.
+Ctrl+Click / ⌘+Click — toggles individual items in/out of the selection without disturbing others.
+Shift+Click — range-selects all placed items between the last clicked cell and the current one (ordered by DOM position, i.e. row by row left to right).
+Ctrl+A / ⌘+A — selects every placed item on the grid at once.
+Escape — clears the entire selection.
+
+*/

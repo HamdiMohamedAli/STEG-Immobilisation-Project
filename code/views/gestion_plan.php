@@ -42,9 +42,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
-        $colIndex    = intval($_POST['col_idx']       ?? 0);
-        $rowIndex    = intval($_POST['row_idx']       ?? 0);
-        $targetFloor = $_POST['current_floor']         ?? 'rc';
+        $colIndex    = intval($_POST['col_idx']   ?? 0);
+        $rowIndex    = intval($_POST['row_idx']   ?? 0);
+        $targetFloor = $_POST['current_floor']     ?? 'rc';
 
         if ($colIndex >= 1 && $rowIndex >= 1) {
             $coords           = getCoordsFromGrid($colIndex, $rowIndex);
@@ -57,12 +57,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             eq.libelle as eqLabel, im.libelle as imLabel, l.labelLocal as lLabel,
                             v.modele as vLabel, v.marque as vMarque
                      FROM element_plan ep
-                     LEFT JOIN magasin m       ON ep.idMagasin = m.idMagasin
-                     LEFT JOIN equipements eq  ON m.typeEntite = 'Equipement' AND m.idCible = eq.idEquip
+                     LEFT JOIN magasin m          ON ep.idMagasin = m.idMagasin
+                     LEFT JOIN equipements eq     ON m.typeEntite = 'Equipement' AND m.idCible = eq.idEquip
                      LEFT JOIN immobilisations im ON m.typeEntite = 'Immobilisation' AND m.idCible = im.idImmo
-                     LEFT JOIN locaux l        ON ep.idLocal = l.idLocal
-                     LEFT JOIN voitures v      ON ep.matriculeVoiture = v.matricule
-                     WHERE ep.idPlan = ? AND ep.xPlan = ? AND ep.yPlan = ? AND ep.orientation = ? 
+                     LEFT JOIN locaux l           ON ep.idLocal = l.idLocal
+                     LEFT JOIN voitures v         ON ep.matriculeVoiture = v.matricule
+                     WHERE ep.idPlan = ? AND ep.xPlan = ? AND ep.yPlan = ? AND ep.orientation = ?
                      LIMIT 1"
                 );
                 $stmtFind->execute([$idPlan, $coords['x'], $coords['y'], $orientationValue]);
@@ -82,11 +82,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     $pdo->prepare("DELETE FROM element_plan WHERE {$primaryKey} = ?")->execute([$idElement]);
                     $actionDesc = "Suppression de l'élément : " . $itemDetails . " | Pos: (X: {$coords['x']}, Y: {$coords['y']}) | Niveau: " . strtoupper($targetFloor);
-                    
+
                     $pdo->prepare(
                         "INSERT INTO journal_logs (idUtilisateur, action, typeAction, cibleEntite, idCible) VALUES (?, ?, ?, ?, ?)"
                     )->execute([$userId, $actionDesc, 'DELETE', 'element_plan', $idElement]);
-                    
+
                     $pdo->commit();
                     echo json_encode(['status' => 'success', 'message' => "Élément supprimé avec succès."]);
                     exit;
@@ -107,12 +107,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (isset($_POST['action_position'])) {
         header('Content-Type: application/json');
-        $idMagasin        = (!empty($_POST['id_magasin'])) ? intval($_POST['id_magasin']) : null;
-        $idLocal          = (!empty($_POST['id_local'])) ? intval($_POST['id_local']) : null;
-        $matriculeVoiture = (!empty($_POST['matricule_voiture'])) ? $_POST['matricule_voiture'] : null;
-        $colIndex    = intval($_POST['col_idx']    ?? 0);
-        $rowIndex    = intval($_POST['row_idx']    ?? 0);
-        $targetFloor = $_POST['current_floor']      ?? 'rc';
+        $idMagasin        = (!empty($_POST['id_magasin']))        ? intval($_POST['id_magasin'])        : null;
+        $idLocal          = (!empty($_POST['id_local']))          ? intval($_POST['id_local'])          : null;
+        $matriculeVoiture = (!empty($_POST['matricule_voiture'])) ? $_POST['matricule_voiture']         : null;
+        $colIndex    = intval($_POST['col_idx']   ?? 0);
+        $rowIndex    = intval($_POST['row_idx']   ?? 0);
+        $targetFloor = $_POST['current_floor']     ?? 'rc';
 
         if ($idLocal !== null && !in_array($userProfil, [1, 2, 3])) {
             echo json_encode(['status' => 'error', 'message' => "Action refusée : Profil insuffisant pour placer des locaux."]);
@@ -143,7 +143,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo->prepare(
                     "INSERT INTO element_plan (idPlan, xPlan, yPlan, orientation, idMagasin, idLocal, matriculeVoiture) VALUES (?, ?, ?, ?, ?, ?, ?)"
                 )->execute([$idPlan, $coords['x'], $coords['y'], $orientationValue, $idMagasin, $idLocal, $matriculeVoiture]);
-                
+
                 $lastId = $pdo->lastInsertId();
                 $itemDetails = "Inconnu";
 
@@ -158,9 +158,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $itemDetails = "[Voiture] " . ($v ? "{$v['marque']} {$v['modele']}" : "") . " ($matriculeVoiture)";
                 } elseif ($idMagasin) {
                     $stmt = $pdo->prepare("
-                        SELECT m.typeEntite, eq.libelle as eqLabel, im.libelle as imLabel 
+                        SELECT m.typeEntite, eq.libelle as eqLabel, im.libelle as imLabel
                         FROM magasin m
-                        LEFT JOIN equipements eq ON m.typeEntite = 'Equipement' AND m.idCible = eq.idEquip
+                        LEFT JOIN equipements eq     ON m.typeEntite = 'Equipement'    AND m.idCible = eq.idEquip
                         LEFT JOIN immobilisations im ON m.typeEntite = 'Immobilisation' AND m.idCible = im.idImmo
                         WHERE m.idMagasin = ?
                     ");
@@ -176,7 +176,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo->prepare(
                     "INSERT INTO journal_logs (idUtilisateur, action, typeAction, cibleEntite, idCible) VALUES (?, ?, ?, ?, ?)"
                 )->execute([$userId, $actionDesc, 'CREATE', 'element_plan', $lastId]);
-                
+
                 $pdo->commit();
                 echo json_encode(['status' => 'success', 'message' => "Élément enregistré avec succès."]);
                 exit;
@@ -206,13 +206,13 @@ $rows  = isset($_GET['rows'])  ? max(2, min(30, (int)$_GET['rows']))  : 10;
 $cols  = isset($_GET['cols'])  ? max(2, min(30, (int)$_GET['cols']))  : 16;
 $floor = $_GET['floor'] ?? 'rc';
 
-$canAdjustDimensions = in_array($userProfil, [1, 2, 3]);
-$canMergeCells       = in_array($userProfil, [1, 2, 3]);
+$canAdjustDimensions     = in_array($userProfil, [1, 2, 3]);
+$canMergeCells           = in_array($userProfil, [1, 2, 3]);
 $allowedProfilsForLocaux = [1, 2, 3];
 
 $allowedTypes = [];
-if (in_array($userProfil, [1, 2, 5]))          { $allowedTypes[] = 'Voiture'; }
-if (in_array($userProfil, [1, 2, 3]))          { $allowedTypes[] = 'Local'; }
+if (in_array($userProfil, [1, 2, 5]))           { $allowedTypes[] = 'Voiture'; }
+if (in_array($userProfil, [1, 2, 3]))           { $allowedTypes[] = 'Local'; }
 if (in_array($userProfil, [1, 2, 3, 4, 5, 6])) { $allowedTypes[] = 'Immobilisation'; $allowedTypes[] = 'Equipement'; }
 
 $composants = [];
@@ -234,7 +234,8 @@ if (in_array('Voiture', $allowedTypes)) {
 
 if (in_array('Local', $allowedTypes)) {
     try {
-        $queryLocaux = "SELECT idLocal, typeLocal, labelLocal FROM locaux";
+        $queryLocaux = "SELECT idLocal, typeLocal, labelLocal FROM locaux
+                        WHERE idLocal NOT IN (SELECT idLocal FROM element_plan WHERE idLocal IS NOT NULL)";
         foreach ($pdo->query($queryLocaux)->fetchAll(PDO::FETCH_ASSOC) as $item) {
             $composants[] = [
                 'value' => $item['idLocal'],
@@ -249,7 +250,7 @@ if (in_array('Local', $allowedTypes)) {
 $magasinTypes = array_intersect(['Equipement', 'Immobilisation'], $allowedTypes);
 if (!empty($magasinTypes)) {
     try {
-        $inClause   = implode(',', array_fill(0, count($magasinTypes), '?'));
+        $inClause     = implode(',', array_fill(0, count($magasinTypes), '?'));
         $queryMagasin = "SELECT m.idMagasin, m.typeEntite, m.referenceInterne,
                          (m.quantiteDisponible - COALESCE(ep_count.placed, 0)) as totalStock,
                          CASE
@@ -284,11 +285,11 @@ try {
               eq.libelle as eqLabel, im.libelle as imLabel, l.labelLocal as lLabel,
               v.modele as vLabel, v.marque as vMarque, ep.idMagasin
               FROM element_plan ep
-              LEFT JOIN magasin m       ON ep.idMagasin          = m.idMagasin
-              LEFT JOIN equipements eq  ON m.typeEntite = 'Equipement'    AND m.idCible = eq.idEquip
+              LEFT JOIN magasin m          ON ep.idMagasin       = m.idMagasin
+              LEFT JOIN equipements eq     ON m.typeEntite = 'Equipement'    AND m.idCible = eq.idEquip
               LEFT JOIN immobilisations im ON m.typeEntite = 'Immobilisation' AND m.idCible = im.idImmo
-              LEFT JOIN locaux l        ON ep.idLocal             = l.idLocal
-              LEFT JOIN voitures v      ON ep.matriculeVoiture    = v.matricule
+              LEFT JOIN locaux l           ON ep.idLocal          = l.idLocal
+              LEFT JOIN voitures v         ON ep.matriculeVoiture = v.matricule
               WHERE ep.idPlan = ? AND ep.orientation = ?";
     $filterOrientation = ($floor === 'e1') ? 1 : 0;
     $stmt = $pdo->prepare($query);
@@ -316,16 +317,25 @@ try {
     }
 } catch (PDOException $e) {}
 
-$groupedComposants = [];
-foreach ($composants as $comp) {
-    $groupedComposants[$comp['type']][] = $comp;
-}
 $groupLabels = [
-    'Voiture'        => '🚗 Voitures',
-    'Local'          => '🏢 Locaux',
-    'Equipement'     => '🛠️ Équipements',
-    'Immobilisation' => '📦 Immobilisations',
+    'Local'          => 'Locaux',
+    'Voiture'        => 'Voitures',
+    'Equipement'     => 'Équipements',
+    'Immobilisation' => 'Immobilisations',
 ];
+
+$groupedComposants = [];
+foreach ($groupLabels as $key => $label) {
+    $groupedComposants[$key] = [];
+}
+foreach ($composants as $comp) {
+    if (isset($groupedComposants[$comp['type']])) {
+        $groupedComposants[$comp['type']][] = $comp;
+    }
+}
+$groupedComposants = array_filter($groupedComposants, function($items) {
+    return !empty($items);
+});
 
 require_once '../includes/header.php';
 require_once '../includes/navbar.php';
@@ -411,7 +421,7 @@ require_once '../includes/navbar.php';
                     Aucun article disponible.
                 </span>
                 <?php foreach ($groupedComposants as $typeKey => $items): ?>
-                    <details class="catalog-group" data-group-type="<?= htmlspecialchars($typeKey, ENT_QUOTES, 'UTF-8') ?>" open>
+                    <details class="catalog-group" data-group-type="<?= htmlspecialchars($typeKey, ENT_QUOTES, 'UTF-8') ?>">
                         <summary><?= htmlspecialchars($groupLabels[$typeKey] ?? $typeKey, ENT_QUOTES, 'UTF-8') ?></summary>
                         <ul class="catalogue-container">
                             <?php foreach ($items as $comp): ?>
