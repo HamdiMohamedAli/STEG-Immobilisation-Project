@@ -10,8 +10,11 @@ Utilisateur -> IHM: Saisir la description et la gravité de la panne
 Utilisateur -> IHM: Cliquer sur "Déclarer la panne"
 IHM -> Sys: declarerPanne(idUtilisateur, idCible, description, gravite)
 
-Sys -> BDD: insererPanne(idPanne, description, date, gravite, idCible)
-BDD --> Sys: Confirmation enregistrement
+' FIX 1 & 2: Removed idPanne from parameters, added idUtilisateur to track who declared it
+Sys -> BDD: insererPanne(idUtilisateur, idCible, description, date, gravite)
+' Database generates the primary key and returns it safely
+BDD --> Sys: Confirmation enregistrement (Retourne idPanne généré)
+
 Sys -> Sys: notifierResponsables()
 
 alt Si cible = Equipement
@@ -20,7 +23,8 @@ else Si cible = Voiture
     Sys -> Resp: Envoyer alerte au Gestionnaire de Voitures
 end
 
-Sys -> BDD: JournalLog.enregistrerTrace("Déclaration Panne")
-Sys --> IHM: Panne signalée avec succès
+' Passed the real idPanne to the audit trail trace
+Sys -> BDD: JournalLog.enregistrerTrace("Déclaration", "Panne", idPanne)
+Sys --> IHM: Panne signalée avec succès (ID: idPanne)
 IHM --> Utilisateur: Afficher confirmation d'envoi
 @enduml

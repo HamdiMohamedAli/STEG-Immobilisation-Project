@@ -2,17 +2,11 @@
 left to right direction
 skinparam packageStyle rectangle
 
-actor "Personnel STEG" as User
-actor "Administrateur" as Admin
 actor "Chef du Centre Informatique" as ChefCentre
 actor "Responsable de Services" as RespServ
 actor "Responsable Équipements" as RespEquip
 actor "Gestionnaire de Voitures" as GestVoit
 actor "Agent de Local" as Agent
-
-User <|-- Admin
-User <|-- Agent
-User <|-- ChefCentre
 
 ChefCentre <|-- RespServ
 ChefCentre <|-- RespEquip
@@ -53,13 +47,13 @@ rectangle "STEG - Gestion des Immobilisations" {
     }
 }
 
-User --> UC_Auth
-User --> UC_Alertes
-User --> UC_PDF
+actor "Administrateur" as Admin
 
-Admin --> UC_Admin_System
-
+ChefCentre --> UC_Auth
 ChefCentre --> UC_Voir_Tout_Plan
+ChefCentre --> UC_Voir_Local_Agent
+ChefCentre --> UC_PDF 
+ChefCentre --> UC_Alertes 
 
 RespServ --> UC_CRUD_Locaux
 RespServ --> UC_DragDrop_Locaux
@@ -73,4 +67,22 @@ GestVoit --> UC_CRUD_Voiture
 GestVoit --> UC_DragDrop_Voiture
 
 Agent --> UC_Voir_Local_Agent
+Agent --> UC_Auth
+Agent --> UC_PDF 
+Agent --> UC_Alertes 
+
+UC_Auth <-- Admin
+UC_Admin_System <-- Admin
+UC_Voir_Tout_Plan <-- Admin
+UC_CRUD_Locaux <-- Admin
+UC_DragDrop_Locaux <-- Admin
+UC_CRUD_Immo <-- Admin
+UC_DragDrop_Immo <-- Admin
+UC_CRUD_Equip <-- Admin
+UC_DragDrop_Equip <-- Admin
+UC_CRUD_Voiture <-- Admin
+UC_DragDrop_Voiture <-- Admin
+UC_Voir_Local_Agent <-- Admin
+UC_PDF <-- Admin
+UC_Alertes <-- Admin
 @enduml

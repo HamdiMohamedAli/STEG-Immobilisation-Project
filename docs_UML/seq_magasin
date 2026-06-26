@@ -1,0 +1,63 @@
+@startuml
+actor "Responsable Équipements" as Resp
+boundary "IHM Gestion Magasin / Stock" as IHM
+control "Système / Contrôleur" as Sys
+database "Base de Données" as BDD
+
+alt Opération : ENREGISTRER STOCK (Create / Accumulate Stock)
+    Resp -> IHM: Sélectionner un article du catalogue et saisir la Qté Disponible à ajouter
+    Resp -> IHM: Cliquer sur "Ajouter au Stock"
+    IHM -> Sys: ajouterStockMagasin(idArticle, qteAjoutee)
+    
+    ' System checks if this catalog item is already tracked in the warehouse
+    Sys -> BDD: verifierExistenceStockParArticle(idArticle)
+    
+    alt Si l'article existe déjà (Accumulation dans la même ligne)
+        BDD --> Sys: Article existant (Retourne idItem, qteActuelle)
+        ' Backend calculates the new sum total
+        Sys -> Sys: Calculer nouvelle quantité (qteActuelle + qteAjoutee)
+        Sys -> BDD: majQuantiteMagasin(idItem, nouvelleQteTotale)
+        BDD --> Sys: OK
+        Sys -> BDD: JournalLog.enregistrerTrace("Approvisionnement Stock", "Magasin", idItem)
+        Sys --> IHM: Stock accumulé et mis à jour avec succès (Ligne consolidée)
+        
+    else Si l'article n'existe pas encore (Création de la ligne initiale)
+        BDD --> Sys: Article non présent dans le stock
+        Sys -> BDD: insererItemMagasin(idArticle, qteAjoutee)
+        BDD --> Sys: OK (Retourne idItem généré)
+        Sys -> BDD: JournalLog.enregistrerTrace("Stock In", "Magasin", idItem)
+        Sys --> IHM: Article enregistré en magasin avec succès (Nouvelle ligne)
+    end
+    
+    IHM --> Resp: Afficher l'article dans l'inventaire du magasin
+
+else Opération : AJUSTEMENT MANUEL QUANTITÉ (Update Stock)
+    Resp -> IHM: Sélectionner un article en stock et modifier directement sa quantité disponible totale
+    Resp -> IHM: Cliquer sur "Ajuster le Stock"
+    IHM -> Sys: ajusterQuantiteMagasin(idItem, nouvelleQteDisponible)
+    
+    Sys -> BDD: verifierExistenceItemMagasin(idItem)
+    BDD --> Sys: Article trouvé en magasin
+    
+    Sys -> BDD: majQuantiteMagasin(idItem, nouvelleQteDisponible)
+    BDD --> Sys: OK
+    
+    Sys -> BDD: JournalLog.enregistrerTrace("Ajustement Stock", "Magasin", idItem)
+    Sys --> IHM: Quantité mise à jour avec succès
+
+else Opération : RETRAIT DU STOCK (Delete / Stock Out)
+    Resp -> IHM: Sélectionner un article en stock et cliquer sur "Retirer du magasin"
+    IHM -> Sys: supprimerItemMagasin(idItem)
+    
+    Sys -> BDD: verifierExistenceItemMagasin(idItem)
+    BDD --> Sys: Article trouvé en magasin
+    
+    Sys -> BDD: detruireItemMagasin(idItem)
+    BDD --> Sys: OK
+    
+    Sys -> BDD: JournalLog.enregistrerTrace("Suppression Stock", "Magasin", idItem)
+    Sys --> IHM: Article retiré définitivement du magasin
+end
+
+IHM --> Resp: Rafraîchir la vue de l'inventaire du magasin
+@enduml

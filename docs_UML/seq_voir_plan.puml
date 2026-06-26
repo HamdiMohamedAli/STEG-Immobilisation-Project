@@ -14,10 +14,9 @@ alt Profil : Chef du Centre ou Responsables Métiers (Vue Globale)
     IHM --> Utilisateur: Effectuer le rendu visuel de TOUT le plan du centre
 
 else Profil : Agent de Local (Vue Restreinte)
-    Sys -> BDD: recupererLocalAssigne(idUtilisateur)
-    BDD --> Sys: Retourner l'idLocal assigné à l'agent
-    Sys -> BDD: recupererElementsPlanParLocal(idLocal)
-    BDD --> Sys: Liste filtrée des ElementsPlan du local restreint
+    ' FIX: Combined the two database calls into a single query round-trip
+    Sys -> BDD: recupererElementsPlanPourAgent(idUtilisateur)
+    BDD --> Sys: Liste filtrée des ElementsPlan du local assigné
     Sys --> IHM: Transmettre les données du local assigné uniquement
     IHM --> Utilisateur: Effectuer le rendu visuel du local de l'agent
 end

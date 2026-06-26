@@ -4,19 +4,25 @@ boundary "IHM Authentification" as IHM
 control "Système / Contrôleur" as Sys
 database "Base de Données" as BDD
 
-Utilisateur -> IHM: Saisir identifiant (4 chiffres) et mot de passe (4 chiffres)
+Utilisateur -> IHM: Saisir identifiant et mot de passe
 Utilisateur -> IHM: Cliquer sur "Se connecter"
 IHM -> Sys: verifierIdentifiants(id, mdp)
 Sys -> BDD: requeteUtilisateur(id)
-BDD --> Sys: Retourner les données + Profil
+BDD --> Sys: Retourner les données (motDePasseHash, statut, Profil)
+
+' Step 1: Check password integrity
 Sys -> Sys: Vérifier le mot de passe (hash)
 
-alt Identifiants Corrects
-    Sys -> BDD: JournalLog.enregistrerTrace("Connexion")
+alt Identifiants Corrects ET statut == "Actif"
+    ' FIX: User is verified and has a valid active status
+    Sys -> BDD: JournalLog.enregistrerTrace("Connexion Réussie", "Utilisateur", id)
     Sys --> IHM: Authentification validée (Retourner profil)
     IHM --> Utilisateur: Afficher l'espace de travail correspondant au profil
-else Identifiants Incorrects
+
+else Identifiants Incorrects OU statut == "Inactif"
+    ' FIX: Safe logging and denial if credentials fail OR account is deactivated
+    Sys -> BDD: JournalLog.enregistrerTrace("Connexion Échouée / Compte Bloqué", "Utilisateur", id)
     Sys --> IHM: Échec d'authentification
-    IHM --> Utilisateur: Afficher un message d'erreur
+    IHM --> Utilisateur: Afficher un message d'erreur (Identifiants invalides ou compte inactif)
 end
 @enduml

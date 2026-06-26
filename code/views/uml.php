@@ -4,7 +4,6 @@ require_once '../includes/navbar.php';
 ?>
 
 <style>
-    /* Layout Wrapper */
     .main-wrapper {
         display: flex;
         height: calc(100vh - 60px); 
@@ -13,7 +12,6 @@ require_once '../includes/navbar.php';
         overflow: hidden;
     }
 
-    /* Sidebar Styling - Dark Blue Variant */
     .sidebar {
         width: 320px;
         background: #1e293b; 
@@ -26,12 +24,11 @@ require_once '../includes/navbar.php';
     .sidebar h3 {
         font-size: 1.1rem;
         color: #f8fafc;
-        margin-bottom: 20px;
-        padding-bottom: 10px;
         border-bottom: 2px solid #334155;
     }
 
     .sidebar ul {
+        overflow: hidden;
         list-style: none;
         padding: 0;
         margin: 0;
@@ -67,7 +64,6 @@ require_once '../includes/navbar.php';
         font-weight: 600;
     }
 
-    /* Viewport Frame */
     .uml-viewport {
         position: relative;
         flex: 1;
@@ -80,7 +76,6 @@ require_once '../includes/navbar.php';
         cursor: grabbing;
     }
 
-    /* Small Pill Zoom Controls */
     .zoom-controls {
         position: absolute;
         bottom: 25px; 
@@ -173,8 +168,9 @@ require_once '../includes/navbar.php';
             <li class="menu-category"><strong>Diagrammes de Séquence</strong></li>
             <li><a href="../../assets/seq_auth.png" class="uml-link">Séquence : S'authentifier par profil</a></li>
             <li><a href="../../assets/seq_admin.png" class="uml-link">Séquence : Gérer les utilisateurs & profils</a></li>
+            <li><a href="../../assets/seq_crud_universal.png" class="uml-link">Séquence : Enregistrement des données (CRUD)</a></li>
+            <li><a href="../../assets/seq_magasin.png" class="uml-link">Séquence : Gestion du magasin</a></li>
             <li><a href="../../assets/seq_voir_plan.png" class="uml-link">Séquence : Visualiser le plan</a></li>
-            <li><a href="../../assets/seq_crud.png" class="uml-link">Séquence : Enregistrement en magasin (CRUD)</a></li>
             <li><a href="../../assets/seq_drag_drop.png" class="uml-link">Séquence : Placement des éléments (Drag & Drop)</a></li>
             <li><a href="../../assets/seq_alertes.png" class="uml-link">Séquence : Déclaration et routage des pannes</a></li>
             <li><a href="../../assets/seq_pdf.png" class="uml-link">Séquence : Génération de rapports PDF</a></li>

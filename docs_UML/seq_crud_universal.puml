@@ -5,35 +5,42 @@ control "Système / Contrôleur" as Sys
 database "Base de Données" as BDD
 
 alt Opération : CRÉATION (Create)
-    Resp -> IHM: Saisir une nouvelle Donnée / Élément (Libellé, Type, Attributs)
+    Resp -> IHM: Saisir une nouvelle Donnée (Libellé, Type, Attributs)
     Resp -> IHM: Valider l'enregistrement
     IHM -> Sys: creerEntite(libelle, type, attributs)
-    Sys -> BDD: verifierExistence(idEntite)
-    BDD --> Sys: ID disponible
-    Sys -> BDD: Enregistrer dans la table cible (DonneeBrute / Entite)
-    BDD --> Sys: OK (idCible)
     
-    Sys -> BDD: stockerAuMagasin(idCible, codeBarre, quantite)
-    BDD --> Sys: OK
-    Sys -> BDD: JournalLog.enregistrerTrace("Création et Stockage Entité")
-    Sys --> IHM: Élément enregistré et disponible
+    ' Directly inserts the asset. Database engine generates the ID.
+    Sys -> BDD: Enregistrer dans la table cible (DonneeBrute / Entite)
+    BDD --> Sys: OK (Retourne idCible généré)
+    
+    Sys -> BDD: JournalLog.enregistrerTrace("Création", "Entité", idCible)
+    Sys --> IHM: Élément enregistré et disponible (ID: idCible)
     IHM --> Resp: Afficher l'élément dans la liste et le catalogue
 
-alt Opération : MODIFICATION (Update)
+else Opération : MODIFICATION (Update)
     Resp -> IHM: Sélectionner un élément et modifier ses informations
     Resp -> IHM: Valider les modifications
     IHM -> Sys: modifierEntite(idCible, nouveauxAttributs)
-    Sys -> BDD: majDonneesEntite(idCible)
+    
+    Sys -> BDD: verifierExistenceEntite(idCible)
+    BDD --> Sys: Élément existant
+    Sys -> BDD: majDonneesEntite(idCible, nouveauxAttributs)
     BDD --> Sys: OK
-    Sys -> BDD: JournalLog.enregistrerTrace("Modification Entité")
+    Sys -> BDD: JournalLog.enregistrerTrace("Modification", "Entité", idCible)
     Sys --> IHM: Succès de la mise à jour
 
-else Opération : SUPPRESSION (Delete)
+else Opération : SUPPRESSION (Physical Hard Delete)
     Resp -> IHM: Sélectionner un élément et cliquer sur "Supprimer"
     IHM -> Sys: supprimerEntite(idCible)
+    
+    Sys -> BDD: verifierExistenceEntite(idCible)
+    BDD --> Sys: Élément existant
+    
+    ' Physical hard delete execution
     Sys -> BDD: detruireEntite(idCible)
     BDD --> Sys: OK
-    Sys -> BDD: JournalLog.enregistrerTrace("Suppression Entité")
+    
+    Sys -> BDD: JournalLog.enregistrerTrace("Suppression", "Entité", idCible)
     Sys --> IHM: Succès de la suppression
 end
 

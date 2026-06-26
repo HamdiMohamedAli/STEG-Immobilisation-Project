@@ -13,6 +13,7 @@ class Utilisateur {
     - tel : string
     - motDePasse : string
     + seConnecter() : boolean
+    + visualiserModifierPlanLocal() : void
     + declarerPanne() : void
     + genererRapportPDF() : void
 }
@@ -44,9 +45,9 @@ class GestionnaireVoitures {
 }
 
 class AgentLocal {
-    + visualiserModifierPlanLocal() : void
 }
 
+' Actor Inheritances
 Utilisateur <|-- Admin
 Utilisateur <|-- AgentLocal
 Utilisateur <|-- ChefCentre
@@ -116,10 +117,13 @@ class Local {
     - superficie : float
 }
 
+' FIX 1: Keeps assignment semantic restricted to the Agent role
 AgentLocal "0..*" --> "1" Local : est assigné à >
 
+' FIX 2: Links layout directly back to the physical assets handled in Drag&Drop
 ElementPlan "0..1" --> "1" Local : positionne >
-ElementPlan "0..1" --> "1" Magasin : instancie sur le plan >
+ElementPlan "0..1" --> "1" Immobilisation : positionne >
+ElementPlan "0..1" --> "1" Equipement : positionne >
 
 class Voiture {
     - matricule : string

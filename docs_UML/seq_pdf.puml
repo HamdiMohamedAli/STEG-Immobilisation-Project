@@ -11,7 +11,9 @@ Sys -> BDD: recupererDonneesContexte(contextPage)
 BDD --> Sys: Données brutes de la page (Pannes, Équipements, Véhicules, Locaux)
 
 Sys -> Sys: Compiler et formater dynamiquement les données au format PDF
-Sys -> BDD: JournalLog.enregistrerTrace("Impression PDF - Page: " + contextPage)
+
+' FIX: Added idUtilisateur to match your system's audit trail requirements
+Sys -> BDD: JournalLog.enregistrerTrace("Impression PDF", contextPage, idUtilisateur)
 
 Sys --> IHM: Transmettre le flux du fichier PDF généré
 IHM --> Utilisateur: Lancer le téléchargement automatique ou ouvrir l'aperçu avant impression

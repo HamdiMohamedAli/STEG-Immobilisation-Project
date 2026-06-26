@@ -5,36 +5,40 @@ control "Système / Contrôleur" as Sys
 database "Base de Données" as BDD
 
 alt Création d'un utilisateur
-    Admin -> IHM: Saisir les informations (ID 4 chiffres, nom, email, tel, profilId)
+    Admin -> IHM: Saisir les informations (nom, email, tel, mdp, profilId)
     Admin -> IHM: Cliquer sur "Enregistrer"
-    IHM -> Sys: creerUtilisateur(idUtilisateur, nom, email, tel, profilId)
-    Sys -> BDD: verifierExistenceUtilisateur(idUtilisateur)
-    BDD --> Sys: ID disponible
-    Sys -> BDD: insererUtilisateur(...)
-    BDD --> Sys: Confirmation insertion
-    Sys -> BDD: JournalLog.enregistrerTrace("Création Utilisateur")
-    Sys --> IHM: Succès de l'enregistrement
+    IHM -> Sys: creerUtilisateur(nom, email, tel, motDePasse, profilId)
+    
+    ' The database inserts the user with a default status of "Actif"
+    Sys -> BDD: insererUtilisateur(nom, email, tel, motDePasse, profilId, statut="Actif")
+    BDD --> Sys: Confirmation (Retourne idUtilisateur généré)
+    
+    Sys -> BDD: JournalLog.enregistrerTrace("Création", "Utilisateur", idUtilisateur)
+    Sys --> IHM: Succès de l'enregistrement (ID: idUtilisateur)
 
-alt Modification d'un utilisateur
+else Modification d'un utilisateur
     Admin -> IHM: Sélectionner un utilisateur et modifier ses données
     Admin -> IHM: Cliquer sur "Modifier"
-    IHM -> Sys: modifierUtilisateur(idUtilisateur, nom, email, tel, profilId)
+    IHM -> Sys: modifierUtilisateur(idUtilisateur, nom, email, tel, motDePasse, profilId)
     Sys -> BDD: verifierExistenceUtilisateur(idUtilisateur)
     BDD --> Sys: ID existant
-    Sys -> BDD: majUtilisateur(...)
+    Sys -> BDD: majUtilisateur(idUtilisateur, nom, email, tel, motDePasse, profilId)
     BDD --> Sys: Confirmation mise à jour
-    Sys -> BDD: JournalLog.enregistrerTrace("Modification Utilisateur")
+    Sys -> BDD: JournalLog.enregistrerTrace("Modification", "Utilisateur", idUtilisateur)
     Sys --> IHM: Succès de la modification
 
-else Suppression d'un utilisateur
+else Suppression d'un utilisateur (Désactivation logique)
     Admin -> IHM: Sélectionner un utilisateur et cliquer sur "Supprimer"
     IHM -> Sys: supprimerUtilisateur(idUtilisateur)
     Sys -> BDD: verifierExistenceUtilisateur(idUtilisateur)
     BDD --> Sys: ID existant
-    Sys -> BDD: detruireUtilisateur(idUtilisateur)
-    BDD --> Sys: Confirmation suppression
-    Sys -> BDD: JournalLog.enregistrerTrace("Suppression Utilisateur")
-    Sys --> IHM: Succès de la suppression
+    
+    ' FIX: Changed from hard delete to soft delete using the status column
+    Sys -> BDD: majStatutUtilisateur(idUtilisateur, statut="Inactif")
+    BDD --> Sys: Confirmation de la désactivation
+    
+    Sys -> BDD: JournalLog.enregistrerTrace("Désactivation", "Utilisateur", idUtilisateur)
+    Sys --> IHM: Succès de la suppression logique
 end
 
 IHM --> Admin: Rafraîchir et afficher la liste à jour des utilisateurs

@@ -4,31 +4,44 @@ boundary "IHM Plan Interactif" as IHM
 control "Système / Contrôleur" as Sys
 database "Base de Données" as BDD
 
-Acteur -> IHM: Glisser et déposer (Drag & Drop) un élément sur le plan à la coordonnée (X, Y)
-IHM -> Sys: positionnerElement(idUtilisateur, idElement, x, y, idLocal)
+== Phase d'Accès au Plan (Avant Drag & Drop) ==
+
+Acteur -> IHM: Demander l'accès au plan interactif (idLocal)
+IHM -> Sys: verifierAccesPlan(idUtilisateur, idLocal)
 
 alt L'acteur connecté est un Agent de Local
     Sys -> BDD: verifierAssignationLocal(idUtilisateur, idLocal)
     BDD --> Sys: Statut assignation (Vrai/Faux)
     
     alt Pas d'assignation ou local différent
-        Sys --> IHM: Erreur : Modification interdite en dehors de votre zone assignée
-        IHM --> Acteur: Afficher un message d'accès refusé (Action annulée)
-    else Assignation valide
-        Sys -> Sys: Instancier / Mettre à jour l'ElementPlan
-        Sys -> BDD: sauvegarderPositionElement(idElement, x, y, idLocal)
-        BDD --> Sys: OK
-        Sys -> BDD: JournalLog.enregistrerTrace("Positionnement Agent - Succès")
-        Sys --> IHM: Mise à jour graphique confirmée
-        IHM --> Acteur: Afficher l'élément repositionné sur votre plan
+        Sys -> BDD: JournalLog.enregistrerTrace("Accès Refusé au Plan", "Local", idLocal)
+        Sys --> IHM: Erreur : Ce local ne vous est pas assigné
+        IHM --> Acteur: Bloquer l'interface (Message d'accès refusé)
     end
-
-else L'acteur connecté est un Responsable Métier (Privilèges élevés)
-    Sys -> Sys: Instancier / Mettre à jour l'ElementPlan
-    Sys -> BDD: sauvegarderPositionElement(idElement, x, y, idLocal)
-    BDD --> Sys: OK
-    Sys -> BDD: JournalLog.enregistrerTrace("Positionnement Responsable - Succès")
-    Sys --> IHM: Mise à jour graphique confirmée
-    IHM --> Acteur: Afficher l'élément repositionné sur le plan général
+else L'acteur connecté est un Responsable Métier
+    ' Responsables skip the assignment check entirely
+    Sys -> Sys: Autoriser accès global
 end
+
+' Both Responsables and Validated Agents reach this point
+Sys --> IHM: Accès autorisé (Charger les éléments du plan)
+IHM --> Acteur: Afficher le plan interactif et activer les modifications
+
+== Phase de Modification (Drag & Drop) ==
+
+Acteur -> IHM: Glisser et déposer (Drag & Drop) un élément sur le plan à la coordonnée (X, Y)
+IHM -> Sys: positionnerElement(idUtilisateur, idElement, x, y, idLocal)
+
+' Safety Check: Validate target element status
+Sys -> BDD: verifierExistenceEntite(idElement)
+BDD --> Sys: Élément existant
+
+' Unified Execution Track (Securely isolated by the initial gate checks)
+Sys -> Sys: Instancier / Mettre à jour l'ElementPlan
+Sys -> BDD: sauvegarderPositionElement(idElement, x, y, idLocal)
+BDD --> Sys: OK
+
+Sys -> BDD: JournalLog.enregistrerTrace("Positionnement Réussi", "Élément", idElement)
+Sys --> IHM: Mise à jour graphique confirmée
+IHM --> Acteur: Afficher l'élément repositionné sur le plan
 @enduml
