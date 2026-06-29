@@ -7,16 +7,17 @@ require_once '../config/db.php';
 
 if (isset($_SESSION['idUtilisateur'])) {
     try {
+        $idInt = (int)$_SESSION['idUtilisateur'];
+
         $stmtLog = $pdo->prepare("INSERT INTO journal_logs (idUtilisateur, action, typeAction, cibleEntite, idCible) VALUES (?, ?, ?, ?, ?)");
         $stmtLog->execute([
-            $_SESSION['idUtilisateur'],
+            $idInt,
             "Déconnexion du système",
             "LOGOUT",
             "Utilisateur",
             "ID: {$_SESSION['idUtilisateur']} | Nom: {$_SESSION['nom']} | Rôle: {$_SESSION['labelProfil']}"
         ]);
     } catch (PDOException $e) {
-        
     }
 }
 
