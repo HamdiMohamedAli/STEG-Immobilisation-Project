@@ -138,7 +138,7 @@ if (!$isEditMode) {
 
 $biens = [];
 try {
-    $query = "SELECT idEquip, typeEquip, libelle FROM Equipements ORDER BY idEquip DESC";
+    $query = "SELECT idEquip, typeEquip, libelle FROM Equipements ORDER BY idEquip ASC";
     $biens = $pdo->query($query)->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
     $errorMsg = "Impossible de charger le catalogue des biens : " . $e->getMessage();

@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_delete'])) {
             SELECT p.idPanne, p.gravite, p.description, p.matriculeVoiture, p.idEquip,
                    e.libelle AS nomEquip
             FROM pannes p
-            LEFT JOIN Equipements e ON p.idEquip = e.idEquip
+            LEFT JOIN equipements e ON p.idEquip = e.idEquip
             WHERE p.idPanne = ?
         ");
         $stmtCheck->execute([$idToDelete]);
@@ -87,22 +87,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_panne'])) {
     $idEquip          = ($typeCible === 'Equipement' && !empty($idCibleVal)) ? intval($idCibleVal) : null;
     $matriculeVoiture = ($typeCible === 'Vehicule' && !empty($idCibleVal)) ? $idCibleVal : null;
 
+    $redirectUrl = ($actionType === 'update') ? $current_page . "?edit=" . $idPanne : $current_page;
+
     if (!empty($description) && (!empty($idEquip) || !empty($matriculeVoiture))) {
         try {
             $pdo->beginTransaction();
 
             $cibleLog = "";
             if ($idEquip) {
-                $stmtEquip = $pdo->prepare("SELECT libelle FROM Equipements WHERE idEquip = ?");
+                $stmtEquip = $pdo->prepare("SELECT libelle FROM equipements WHERE idEquip = ?");
                 $stmtEquip->execute([$idEquip]);
                 $cibleLog = "Équipement: " . ($stmtEquip->fetchColumn() ?: "ID: $idEquip");
             } else {
-                $cibleLog = "Véhicule: " . $matriculeVoiture;
+                $stmtVeh = $pdo->prepare("SELECT marque, modele FROM voitures WHERE matricule = ?");
+                $stmtVeh->execute([$matriculeVoiture]);
+                $veh = $stmtVeh->fetch(PDO::FETCH_ASSOC);
+                $cibleLog = "Véhicule: " . $matriculeVoiture . " (" . ($veh ? $veh['marque'] . ' ' . $veh['modele'] : 'Inconnu') . ")";
             }
 
             if ($actionType === 'create') {
-                $pdo->prepare("INSERT INTO pannes (description, dateDeclaration, gravite, statut, idEquip, matriculeVoiture, idUtilisateur) VALUES (?, ?, ?, ?, ?, ?, ?)")
-                    ->execute([$description, $dateDeclaration, $gravite, $statut, $idEquip, $matriculeVoiture, $userId]);
+                $pdo->prepare("INSERT INTO pannes (description, dateDeclaration, gravite, idEquip, matriculeVoiture, idUtilisateur) VALUES (?, ?, ?, ?, ?, ?)")
+                    ->execute([$description, $dateDeclaration, $gravite, $idEquip, $matriculeVoiture, $userId]);
                 $lastId = $pdo->lastInsertId();
 
                 $pdo->prepare("INSERT INTO journal_logs (idUtilisateur, action, typeAction, cibleEntite, idCible) VALUES (?, ?, ?, ?, ?)")
@@ -111,14 +116,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_panne'])) {
                         "Déclaration d'un ticket de panne",
                         "INSERT",
                         "Panne",
-                        "Ticket: " . sprintf('%04d', $lastId) . " | " . $cibleLog . " | Gravité: $gravite | Statut: $statut"
+                        "Ticket: " . sprintf('%04d', $lastId) . " | " . $cibleLog . " | Gravité: $gravite"
                     ]);
 
                 $_SESSION['success_msg'] = "La panne a été déclarée avec succès (Ticket #" . sprintf('%04d', $lastId) . ").";
+                $redirectUrl = $current_page;
 
             } elseif ($actionType === 'update') {
-                $pdo->prepare("UPDATE pannes SET description=?, dateDeclaration=?, gravite=?, statut=?, idEquip=?, matriculeVoiture=? WHERE idPanne=?")
-                    ->execute([$description, $dateDeclaration, $gravite, $statut, $idEquip, $matriculeVoiture, $idPanne]);
+                $pdo->prepare("UPDATE pannes SET description=?, dateDeclaration=?, gravite=?, idEquip=?, matriculeVoiture=? WHERE idPanne=?")
+                    ->execute([$description, $dateDeclaration, $gravite, $idEquip, $matriculeVoiture, $idPanne]);
 
                 $pdo->prepare("INSERT INTO journal_logs (idUtilisateur, action, typeAction, cibleEntite, idCible) VALUES (?, ?, ?, ?, ?)")
                     ->execute([
@@ -126,10 +132,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_panne'])) {
                         "Mise à jour du ticket de panne",
                         "UPDATE",
                         "Panne",
-                        "Ticket: " . sprintf('%04d', $idPanne) . " | " . $cibleLog . " | Gravité: $gravite | Statut: $statut"
+                        "Ticket: " . sprintf('%04d', $idPanne) . " | " . $cibleLog . " | Gravité: $gravite"
                     ]);
 
                 $_SESSION['success_msg'] = "Le ticket #" . sprintf('%04d', $idPanne) . " a été mis à jour.";
+                $redirectUrl = $current_page;
             }
 
             $pdo->commit();
@@ -141,7 +148,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_panne'])) {
         $_SESSION['error_msg'] = "Veuillez remplir tous les champs requis et sélectionner une cible valide.";
     }
 
-    header("Location: " . $current_page);
+    header("Location: " . $redirectUrl);
     exit();
 }
 
@@ -157,7 +164,6 @@ if (isset($_GET['edit'])) {
         $form_description     = $panneToEdit['description'];
         $form_dateDeclaration = date('Y-m-d', strtotime($panneToEdit['dateDeclaration']));
         $form_gravite         = $panneToEdit['gravite'];
-        $form_statut          = $panneToEdit['statut'] ?? 'actif';
         
         if (!empty($panneToEdit['idEquip'])) {
             $form_typeCible = 'Equipement';
@@ -169,7 +175,7 @@ if (isset($_GET['edit'])) {
     }
 }
 
-$equipements = $pdo->query("SELECT idEquip, libelle, typeEquip FROM Equipements ORDER BY libelle ASC")->fetchAll(PDO::FETCH_ASSOC);
+$equipements = $pdo->query("SELECT idEquip, libelle, typeEquip FROM equipements ORDER BY libelle ASC")->fetchAll(PDO::FETCH_ASSOC);
 $voitures    = $pdo->query("SELECT matricule, marque, modele FROM voitures ORDER BY marque ASC")->fetchAll(PDO::FETCH_ASSOC);
 
 $listePannes = [];
@@ -178,9 +184,9 @@ try {
         SELECT p.*, u.nom, e.libelle AS nomEquip, e.typeEquip, v.marque, v.modele
         FROM pannes p
         LEFT JOIN users u ON p.idUtilisateur = u.idUtilisateur
-        LEFT JOIN Equipements e ON p.idEquip = e.idEquip
+        LEFT JOIN equipements e ON p.idEquip = e.idEquip
         LEFT JOIN voitures v ON p.matriculeVoiture = v.matricule
-        ORDER BY p.idPanne DESC
+        ORDER BY p.idPanne ASC
     ")->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
     $errorMsg = "Impossible de charger le registre des pannes : " . $e->getMessage();
@@ -263,7 +269,6 @@ try {
     }
 
     function handleDatalistInput(value) {
-        const typeCible = document.getElementById('typeCible').value;
         const datalist = document.getElementById('liste-cibles');
         const idCibleInput = document.getElementById('idCible');
         const options = datalist.options;
@@ -300,7 +305,7 @@ try {
                 <?= $isEditMode ? "Modifier le Ticket #" . sprintf('%04d', $form_idPanne) : "Signaler une nouvelle panne" ?>
             </h2>
             <hr>
-            <form action="<?= htmlspecialchars($current_page) ?>" method="POST" class="steg-form">
+            <form action="<?= htmlspecialchars($current_page) . ($isEditMode ? '?edit='.$form_idPanne : '') ?>" method="POST" class="steg-form">
                 <input type="hidden" name="action_panne" value="<?= $isEditMode ? 'update' : 'create' ?>">
                 <?php if ($isEditMode): ?>
                     <input type="hidden" name="idPanne" value="<?= $form_idPanne ?>">
@@ -342,24 +347,13 @@ try {
                     <input type="date" id="dateDeclaration" name="dateDeclaration" required value="<?= htmlspecialchars($form_dateDeclaration) ?>">
                 </div>
 
-                <div class="form-group-row">
-                    <div class="form-control">
-                        <label for="gravite">Niveau de Gravité *</label>
-                        <select id="gravite" name="gravite" required>
-                            <option value="Faible"   <?= $form_gravite === 'Faible'   ? 'selected' : '' ?>>Faible</option>
-                            <option value="Moyenne"  <?= $form_gravite === 'Moyenne'  ? 'selected' : '' ?>>Moyenne</option>
-                            <option value="Critique" <?= $form_gravite === 'Critique' ? 'selected' : '' ?>>Critique</option>
-                        </select>
-                    </div>
-
-                    <div class="form-control">
-                        <label for="statut">État de Résolution *</label>
-                        <select id="statut" name="statut" required>
-                            <option value="actif"    <?= $form_statut === 'actif'    ? 'selected' : '' ?>>Actif (En Attente)</option>
-                            <option value="en_cours" <?= $form_statut === 'en_cours' ? 'selected' : '' ?>>En cours d'intervention</option>
-                            <option value="resolu"   <?= $form_statut === 'resolu'   ? 'selected' : '' ?>>Résolu (Fermé)</option>
-                        </select>
-                    </div>
+                <div class="form-control">
+                    <label for="gravite">Niveau de Gravité *</label>
+                    <select id="gravite" name="gravite" required>
+                        <option value="Faible"   <?= $form_gravite === 'Faible'   ? 'selected' : '' ?>>Faible</option>
+                        <option value="Moyenne"  <?= $form_gravite === 'Moyenne'  ? 'selected' : '' ?>>Moyenne</option>
+                        <option value="Critique" <?= $form_gravite === 'Critique' ? 'selected' : '' ?>>Critique</option>
+                    </select>
                 </div>
 
                 <div class="form-control">
@@ -388,29 +382,11 @@ try {
                         (<?= count($listePannes) ?> ticket<?= count($listePannes) > 1 ? 's' : '' ?>)
                     </span>
                 </h2>
-                
-                <div style="display:flex;align-items:center;gap:10px;">
-                    <button type="button" onclick="window.print();" class="btn-print" style="background:#0d6efd;color:white;border:none;padding:6px 14px;border-radius:4px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;">
-                        <i class="fa-solid fa-print"></i> Imprimer
-                    </button>
-                </div>
+                <button type="button" onclick="window.print();" class="btn-print" style="background:#0d6efd;color:white;border:none;padding:6px 14px;border-radius:4px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;">
+                    <i class="fa-solid fa-print"></i> Imprimer
+                </button>
             </div>
             <hr>
-
-            <div class="print-header-steg">
-                <table style="width:100%;border:none;">
-                    <tr>
-                        <td style="border:none !important;text-align:left;padding:0 !important;">
-                            <strong>Société Tunisienne de l'Électricité et du Gaz</strong><br>
-                            Direction Informatique &amp; Maintenance Logistique
-                        </td>
-                        <td style="border:none !important;text-align:right;padding:0 !important;">
-                            Date d'édition : <?= date('d/m/Y H:i') ?>
-                        </td>
-                    </tr>
-                </table>
-                <h2 style="text-align:center;margin-top:20px;font-size:18pt;">Registre Officiel du Suivi Technique des Incidents</h2>
-            </div>
 
             <div class="table-scroll">
                 <table class="steg-table">
@@ -420,7 +396,6 @@ try {
                             <th>Cible concernée</th>
                             <th>Détails de l'incident</th>
                             <th>Gravité</th>
-                            <th>Statut</th>
                             <th class="btn-action">Actions</th>
                         </tr>
                     </thead>
@@ -428,25 +403,20 @@ try {
                         <?php foreach ($listePannes as $panne): 
                             $targetType = !empty($panne['matriculeVoiture']) ? 'Vehicule' : 'Equipement';
                             $gravClass  = strtolower($panne['gravite'] ?? 'moyenne');
-                            $statValue  = $panne['statut'] ?? 'actif';
-                            
-                            $statMap    = [
-                                'actif'    => ['en-attente', 'En Attente'], 
-                                'en_cours' => ['en-cours', 'En Cours'], 
-                                'resolu'   => ['résolu', 'Résolu']
-                            ];
-                            $resolvedStatus = $statMap[$statValue] ?? ['en-attente', htmlspecialchars($statValue)];
                         ?>
                         <tr>
                             <td class="cell-user-id"><strong><?= sprintf('%04d', $panne['idPanne']) ?></strong></td>
                             <td>
                                 <?php if ($targetType === 'Vehicule'): ?>
-                                    <span class="badge-role-type role-immobilisation" style="background-color: #e0f2fe; color: #0369a1;">
-                                        <i class="fa-solid fa-car"></i> <?= htmlspecialchars($panne['matriculeVoiture']) ?>
+                                    <span class="badge-role-type role-immobilisation" style="background-color: #e0f2fe; color: #0369a1; padding: 4px 8px; border-radius: 4px; font-weight: bold;">
+                                        <?= htmlspecialchars($panne['matriculeVoiture']) ?>
                                     </span>
+                                    <div style="font-size:0.75rem; color:#475569; margin-top: 2px;">
+                                        <?= htmlspecialchars(($panne['marque'] ?? '') . ' ' . ($panne['modele'] ?? '')) ?>
+                                    </div>
                                 <?php else: ?>
                                     <span class="badge-role-type role-equipement">
-                                        <i class="fa-solid fa-screwdriver-wrench"></i> <?= htmlspecialchars($panne['nomEquip'] ?? 'ID: '.$panne['idEquip']) ?>
+                                        <?= htmlspecialchars($panne['nomEquip'] ?? 'ID: '.$panne['idEquip']) ?>
                                     </span>
                                 <?php endif; ?>
                             </td>
@@ -457,13 +427,11 @@ try {
                                 <div style="margin-top:4px;font-weight:bold;"><?= htmlspecialchars($panne['description'] ?? '') ?></div>
                             </td>
                             <td><span class="badge-grav severity-<?= $gravClass ?>"><?= htmlspecialchars($panne['gravite'] ?? 'Moyenne') ?></span></td>
-                            <td><span class="badge-status status-<?= $resolvedStatus[0] ?>"><?= $resolvedStatus[1] ?></span></td>
-                            <td class="btn-action" style="white-space:nowrap; display: flex; align-items: center;">
+                            <td class="btn-action" style="white-space:nowrap;">
                                 <a href="<?= htmlspecialchars($current_page) ?>?edit=<?= intval($panne['idPanne']) ?>" title="Modifier" style="color:#ffc107;margin-right:15px;font-size:1.1rem; text-decoration: none;">
                                     <i class="fa-solid fa-pen-to-square"></i>
                                 </a>
-                                
-                                <form action="<?= htmlspecialchars($current_page) ?>" method="POST" onsubmit="return confirm('Supprimer définitivement le ticket #<?= sprintf('%04d', $panne['idPanne']) ?> ?');" style="margin: 0; padding: 0;">
+                                <form action="<?= htmlspecialchars($current_page) ?>" method="POST" onsubmit="return confirm('Supprimer définitivement le ticket #<?= sprintf('%04d', $panne['idPanne']) ?> ?');" style="margin: 0; padding: 0; display: inline-block;">
                                     <input type="hidden" name="action_delete" value="1">
                                     <input type="hidden" name="idPanneToDelete" value="<?= intval($panne['idPanne']) ?>">
                                     <button type="submit" style="background: none; border: none; color: #dc3545; font-size: 1.1rem; cursor: pointer; padding: 0;">
@@ -473,9 +441,8 @@ try {
                             </td>
                         </tr>
                         <?php endforeach; ?>
-                        
                         <tr id="no-data-row" class="no-data-row" style="display: <?= empty($listePannes) ? '' : 'none' ?>;">
-                            <td colspan="6" style="text-align:center; padding:20px; color:#6c757d;">Aucun incident de maintenance répertorié pour cette sélection.</td>
+                            <td colspan="5" style="text-align:center; padding:20px; color:#6c757d;">Aucun incident de maintenance répertorié.</td>
                         </tr>
                     </tbody>
                 </table>
@@ -491,7 +458,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('typeCible').value = "<?= $form_typeCible ?>";
         handleTypeCibleChange();
         <?php if ($form_typeCible === 'Equipement' && !empty($panneToEdit['idEquip'])): 
-            $stmtGetSub = $pdo->prepare("SELECT typeEquip, libelle FROM Equipements WHERE idEquip = ?");
+            $stmtGetSub = $pdo->prepare("SELECT typeEquip, libelle FROM equipements WHERE idEquip = ?");
             $stmtGetSub->execute([$panneToEdit['idEquip']]);
             $subInfo = $stmtGetSub->fetch(PDO::FETCH_ASSOC);
             if ($subInfo): ?>

@@ -7,239 +7,216 @@ require_once '../includes/header.php';
 require_once '../includes/navbar.php';
 require_once '../config/db.php';
 
-$successMsg = $_SESSION['success_msg'] ?? '';
-$errorMsg = $_SESSION['error_msg'] ?? '';
-unset($_SESSION['success_msg'], $_SESSION['error_msg']);
+$successMsg = '';
+$errorMsg = '';
 
-$isEditMode = false;
-$form_idImmo = '';
-$form_typeImmo = '';
-$form_libelle = '';
+$allowedTypes = ['Atelier', 'Bureau', 'DataCenter', 'Issue de secours', 'Local', 'Salle', 'Magasin', 'Sanitaire'];
 
-$current_page = basename($_SERVER['PHP_SELF']);
-
-$categories = ["Armoire", "Bureau", "Chaise", "Fauteuil", "Porte", "Réfrigérateur", "Table", "Tableau"];
-natcasesort($categories);
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_local'])) {
+    $action = $_POST['action_local'];
     $userId = $_SESSION['idUtilisateur'] ?? null;
 
-    if (isset($_POST['action_delete'])) {
-        $idToDelete = intval($_POST['idImmoToDelete'] ?? 0);
-        
-        try {
-            $stmtCheck = $pdo->prepare("SELECT libelle FROM immobilisations WHERE idImmo = ?");
-            $stmtCheck->execute([$idToDelete]);
-            $immo = $stmtCheck->fetch(PDO::FETCH_ASSOC);
+    if ($action === 'create') {
+        $typeLocal = trim($_POST['typeLocal'] ?? '');
+        $labelLocal = trim($_POST['labelLocal'] ?? '');
 
-            if ($immo) {
-                $libelleImmo = $immo['libelle'];
-                
+        if (!empty($typeLocal) && in_array($typeLocal, $allowedTypes, true)) {
+            try {
                 $pdo->beginTransaction();
+
+                $sqlInsert = "INSERT INTO locaux (typeLocal, labelLocal) VALUES (?, ?)";
+                $stmt = $pdo->prepare($sqlInsert);
+                $stmt->execute([$typeLocal, $labelLocal]);
                 
-                $stmtDel = $pdo->prepare("DELETE FROM immobilisations WHERE idImmo = ?");
-                $stmtDel->execute([$idToDelete]);
+                $lastId = $pdo->lastInsertId();
 
                 $stmtLog = $pdo->prepare("INSERT INTO journal_logs (idUtilisateur, action, typeAction, cibleEntite, idCible) VALUES (?, ?, ?, ?, ?)");
-                $actionDescription = "Suppression de l'immobilisation " . sprintf('%04d', $idToDelete) . " ($libelleImmo)";
-                $stmtLog->execute([$userId, $actionDescription, 'DELETE', 'Immobilisation', $idToDelete]);
+                $actionDescription = "Création du local " . sprintf('%04d', $lastId) . " (typeLocal: $typeLocal, libelle: $labelLocal)";
+                $stmtLog->execute([$userId, $actionDescription, 'CREATE', 'Local', $lastId]);
 
                 $pdo->commit();
-                $_SESSION['success_msg'] = "L'immobilisation '" . htmlspecialchars($libelleImmo) . "' a été supprimée avec succès.";
-            } else {
-                $_SESSION['error_msg'] = "Immobilisation introuvable.";
+                $successMsg = "Le local a été enregistré avec succès sous l'identifiant " . sprintf('%04d', $lastId) . ".";
+            } catch (PDOException $e) {
+                if ($pdo->inTransaction()) { $pdo->rollBack(); }
+                $errorMsg = "Erreur lors de la création du local : " . $e->getMessage();
             }
-        } catch (PDOException $e) {
-            if ($pdo->inTransaction()) { $pdo->rollBack(); }
-            $_SESSION['error_msg'] = "Erreur lors de la suppression : " . $e->getMessage();
+        } else {
+            $errorMsg = "Veuillez sélectionner un type de local valide.";
         }
-        
-        header("Location: " . $current_page);
-        exit();
     }
 
-    if (isset($_POST['action_ajout'])) {
-        $actionType = $_POST['action_ajout'];
-        $typeImmo = $_POST['typeImmo'] ?? '';
-        $libelle = trim($_POST['libelle'] ?? '');
+    elseif ($action === 'update') {
+        $idLocal = intval($_POST['idLocal'] ?? 0);
+        $typeLocal = trim($_POST['typeLocal'] ?? '');
+        $labelLocal = trim($_POST['labelLocal'] ?? '');
 
-        if (!empty($typeImmo) && !empty($libelle)) {
+        if ($idLocal > 0 && !empty($typeLocal) && in_array($typeLocal, $allowedTypes, true)) {
             try {
-                if ($actionType === 'create') {
-                    $pdo->beginTransaction();
-                    $sqlInsert = "INSERT INTO immobilisations (typeImmo, libelle) VALUES (?, ?)";
-                    $pdo->prepare($sqlInsert)->execute([$typeImmo, $libelle]);
-                    $lastId = $pdo->lastInsertId();
+                $pdo->beginTransaction();
+
+                $sqlUpdate = "UPDATE locaux SET typeLocal = ?, labelLocal = ? WHERE idLocal = ?";
+                $stmt = $pdo->prepare($sqlUpdate);
+                $stmt->execute([$typeLocal, $labelLocal, $idLocal]);
+
+                $stmtLog = $pdo->prepare("INSERT INTO journal_logs (idUtilisateur, action, typeAction, cibleEntite, idCible) VALUES (?, ?, ?, ?, ?)");
+                $actionDescription = "Modification du local " . sprintf('%04d', $idLocal) . " (Type: $typeLocal, Libellé: $labelLocal)";
+                $stmtLog->execute([$userId, $actionDescription, 'UPDATE', 'Local', $idLocal]);
+
+                $pdo->commit();
+                $successMsg = "Le local n°" . sprintf('%04d', $idLocal) . " a été modifié avec succès.";
+            } catch (PDOException $e) {
+                if ($pdo->inTransaction()) { $pdo->rollBack(); }
+                $errorMsg = "Erreur lors de la modification du local : " . $e->getMessage();
+            }
+        } else {
+            $errorMsg = "Données invalides. Impossible de mettre à jour le local.";
+        }
+    }
+
+    elseif ($action === 'delete') {
+        $idLocal = intval($_POST['idLocal'] ?? 0);
+
+        if ($idLocal > 0) {
+            try {
+                $pdo->beginTransaction();
+
+                $stmtSelect = $pdo->prepare("SELECT typeLocal, labelLocal FROM locaux WHERE idLocal = ?");
+                $stmtSelect->execute([$idLocal]);
+                $localData = $stmtSelect->fetch(PDO::FETCH_ASSOC);
+
+                if ($localData) {
+                    $sqlDelete = "DELETE FROM locaux WHERE idLocal = ?";
+                    $stmt = $pdo->prepare($sqlDelete);
+                    $stmt->execute([$idLocal]);
 
                     $stmtLog = $pdo->prepare("INSERT INTO journal_logs (idUtilisateur, action, typeAction, cibleEntite, idCible) VALUES (?, ?, ?, ?, ?)");
-                    $actionDescription = "Création de l'immobilisation " . sprintf('%04d', $lastId) . " ($libelle)";
-                    $stmtLog->execute([$userId, $actionDescription, 'CREATE', 'Immobilisation', $lastId]);
+                    $actionDescription = "Suppression du local " . sprintf('%04d', $idLocal) . " (Type: {$localData['typeLocal']}, Libellé: {$localData['labelLocal']})";
+                    $stmtLog->execute([$userId, $actionDescription, 'DELETE', 'Local', $idLocal]);
+
                     $pdo->commit();
-
-                    $_SESSION['success_msg'] = "L'immobilisation '" . htmlspecialchars($libelle) . "' a été enregistrée avec succès.";
-                    
-                } elseif ($actionType === 'update') {
-                    $idImmo = intval($_POST['idImmo'] ?? 0);
-                    
-                    $pdo->beginTransaction();
-                    $sqlUpdate = "UPDATE immobilisations SET typeImmo = ?, libelle = ? WHERE idImmo = ?";
-                    $pdo->prepare($sqlUpdate)->execute([$typeImmo, $libelle, $idImmo]);
-
-                    $stmtLog = $pdo->prepare("INSERT INTO journal_logs (idUtilisateur, action, typeAction, cibleEntite, idCible) VALUES (?, ?, ?, ?, ?)");
-                    $actionDescription = "Modification de l'immobilisation " . sprintf('%04d', $idImmo) . " (Nouveau libelle: $libelle)";
-                    $stmtLog->execute([$userId, $actionDescription, 'UPDATE', 'Immobilisation', $idImmo]);
-                    $pdo->commit();
-
-                    $_SESSION['success_msg'] = "L'immobilisation '" . sprintf('%04d', $idImmo) . "' a été mise à jour.";
+                    $successMsg = "Le local n°" . sprintf('%04d', $idLocal) . " a été définitivement supprimé.";
+                } else {
+                    $pdo->rollBack();
+                    $errorMsg = "Le local demandé n'existe pas ou a déjà été supprimé.";
                 }
             } catch (PDOException $e) {
                 if ($pdo->inTransaction()) { $pdo->rollBack(); }
-                $_SESSION['error_msg'] = "Erreur système : " . $e->getMessage();
+                $errorMsg = "Erreur lors de la suppression du local : " . $e->getMessage();
             }
         } else {
-            $_SESSION['error_msg'] = "Veuillez remplir tous les champs obligatoires (*).";
+            $errorMsg = "Identifiant de local incorrect.";
         }
-        
-        header("Location: " . $current_page);
-        exit();
-    }
-}
-
-if (isset($_GET['edit'])) {
-    $idToEdit = intval($_GET['edit']);
-    $stmtEdit = $pdo->prepare("SELECT * FROM immobilisations WHERE idImmo = ?");
-    $stmtEdit->execute([$idToEdit]);
-    $immoToEdit = $stmtEdit->fetch(PDO::FETCH_ASSOC);
-
-    if ($immoToEdit) {
-        $isEditMode = true;
-        $form_idImmo = $immoToEdit['idImmo'];
-        $form_typeImmo = $immoToEdit['typeImmo'];
-        $form_libelle = $immoToEdit['libelle'];
     }
 }
 
 $nextId = 1;
-if (!$isEditMode) {
-    try {
-        $stmtNext = $pdo->query("SHOW TABLE STATUS LIKE 'immobilisations'");
-        $status = $stmtNext->fetch(PDO::FETCH_ASSOC);
-        if ($status && isset($status['Auto_increment'])) {
-            $nextId = intval($status['Auto_increment']);
-        } else {
-            $stmtFallback = $pdo->query("SELECT idImmo FROM immobilisations ORDER BY idImmo DESC LIMIT 1");
-            $lastRow = $stmtFallback->fetch(PDO::FETCH_ASSOC);
-            if ($lastRow) {
-                $nextId = intval($lastRow['idImmo']) + 1;
-            }
-        }
-    } catch (PDOException $e) {}
-}
-
-$biens = [];
 try {
-    $query = "SELECT idImmo, typeImmo, libelle FROM immobilisations ORDER BY idImmo DESC";
-    $biens = $pdo->query($query)->fetchAll(PDO::FETCH_ASSOC);
+    $stmtNext = $pdo->query("SELECT idLocal FROM locaux ORDER BY idLocal DESC LIMIT 1;");
+    $lastRow = $stmtNext->fetch(PDO::FETCH_ASSOC);
+    if ($lastRow) {
+        $nextId = intval($lastRow['idLocal']) + 1;
+    }
+} catch (PDOException $e) {}
+
+$locaux = [];
+try {
+    $query = "SELECT l.* FROM locaux l ORDER BY l.idLocal ASC";
+    $locaux = $pdo->query($query)->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
-    $errorMsg = "Impossible de charger le catalogue des biens : " . $e->getMessage();
+    $errorMsg = "Échec du chargement du cadastre des locaux : " . $e->getMessage();
 }
 ?>
 
-<div class="immo-wrapper">
-    <div>
-        <h1><i class="fa-solid fa-boxes-stacked"></i> Gestion des Immobilisations (STEG)</h1>
+<div class="locaux-wrapper">
+    <div class="locaux-header">
+        <h1><i class="fa-solid fa-building-user"></i> Gestion des Locaux</h1>
     </div>
     <br>
 
     <?php if (!empty($successMsg)): ?>
-        <div class="alert alert-success"><i class="fa-solid fa-circle-check"></i> <?= htmlspecialchars($successMsg) ?></div>
+        <div class="alert alert-success"><i class="fa-solid fa-check-double"></i> <?= htmlspecialchars($successMsg, ENT_QUOTES, 'UTF-8') ?></div>
     <?php endif; ?>
     <?php if (!empty($errorMsg)): ?>
-        <div class="alert alert-danger"><i class="fa-solid fa-circle-exclamation"></i> <?= htmlspecialchars($errorMsg) ?></div>
+        <div class="alert alert-danger"><i class="fa-solid fa-triangle-exclamation"></i> <?= htmlspecialchars($errorMsg, ENT_QUOTES, 'UTF-8') ?></div>
     <?php endif; ?>
 
-    <div class="immo-grid">
-        <div class="immo-card card-form">
-            <h2>
-                <i class="fa-solid <?= $isEditMode ? 'fa-pen-to-square' : 'fa-plus' ?>"></i> 
-                <?= $isEditMode ? "Modifier le bien " . sprintf('%04d', $form_idImmo) : "Enregistrer un nouveau bien" ?>
-            </h2>
+    <div class="locaux-grid">
+        <div class="locaux-card card-form">
+            <h2 id="form-title"><i class="fa-solid fa-square-plus"></i> Déclarer un nouveau local</h2>
             <hr>
-            <form action="<?= htmlspecialchars($current_page) ?>" method="POST" class="steg-form">
-                <input type="hidden" name="action_ajout" value="<?= $isEditMode ? 'update' : 'create' ?>">
-                <?php if ($isEditMode): ?>
-                    <input type="hidden" name="idImmo" value="<?= intval($form_idImmo) ?>">
-                <?php endif; ?>
+            <form action="gestion_locaux.php" method="POST" class="steg-form" id="localForm">
+                <input type="hidden" name="action_local" id="formAction" value="create">
+                <input type="hidden" name="idLocal" id="formIdLocal" value="">
 
                 <div class="form-control">
-                    <label for="idLocalDisplay">Identifiant Auto</label>
-                    <input type="text" id="idLocalDisplay" value="<?= $isEditMode ? sprintf('%04d', $form_idImmo) : sprintf('%04d', $nextId) ?>" readonly style="background-color: #e9ecef; cursor: not-allowed; font-weight: bold;">
+                    <label for="idLocalDisplay" id="labelIdDisplay">Identifiant (Automatique)</label>
+                    <input type="text" id="idLocalDisplay" value="<?= sprintf('%04d', $nextId) ?>" readonly style="background-color: #e9ecef; cursor: not-allowed; font-weight: bold;">
                 </div>
 
                 <div class="form-control">
-                    <label for="typeImmo">Type d'immobilisation *</label>
-                    <select id="typeImmo" name="typeImmo" required>
-                        <option value="" disabled <?= !$isEditMode ? 'selected' : '' ?>>-- Choisir un type --</option>
-                        <?php foreach ($categories as $cat): ?>
-                            <option value="<?= htmlspecialchars($cat) ?>" <?= $form_typeImmo === $cat ? 'selected' : '' ?>><?= htmlspecialchars($cat) ?></option>
+                    <label for="typeLocal">Type Local *</label>
+                    <select id="typeLocal" name="typeLocal" required>
+                        <option value="">-- Sélectionner un type --</option>
+                        <?php foreach ($allowedTypes as $type): ?>
+                            <option value="<?= $type ?>"><?= $type ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
 
                 <div class="form-control">
-                    <label for="libelle">Libellé / Désignation *</label>
-                    <input type="text" id="libelle" name="libelle" required placeholder="Ex: Porte d'entrée blindée bloc B" value="<?= htmlspecialchars($form_libelle) ?>">
+                    <label for="labelLocal">Libellé Local</label>
+                    <input type="text" id="labelLocal" name="labelLocal" placeholder="Ex: Local Technique Principal">
                 </div>
 
-                <button type="submit" class="btn btn-success btn-block">
-                    <i class="fa-solid <?= $isEditMode ? 'fa-floppy-disk' : 'fa-arrow-down-long' ?>"></i> 
-                    <?= $isEditMode ? "Mettre à jour l'inventaire" : "Valider l'inventaire" ?>
+                <button type="submit" id="btnSubmitForm" class="btn btn-primary btn-block">
+                    <i class="fa-solid fa-floppy-disk"></i> Enregistrer le local
                 </button>
-
-                <?php if ($isEditMode): ?>
-                    <a href="<?= htmlspecialchars($current_page) ?>" class="btn btn-primary btn-block" style="margin-top: 10px; background-color: #64748b; text-align: center; display: block; text-decoration: none;">
-                        <i class="fa-solid fa-xmark"></i> Annuler la modification
-                    </a>
-                <?php endif; ?>
+                
+                <button type="button" id="btnCancelEdit" class="btn btn-secondary btn-block" style="display:none; margin-top: 8px;" onclick="resetFormToCreate(<?= $nextId ?>)">
+                    <i class="fa-solid fa-xmark"></i> Annuler la modification
+                </button>
             </form>
         </div>
 
-        <div class="immo-card card-table">
-            <h2><i class="fa-solid fa-list"></i> Registre des Données Brutes</h2>
+        <div class="locaux-card card-table">
+            <h2><i class="fa-solid fa-map"></i> Cadastre Actif des Locaux</h2>
             <hr>
             <div class="table-scroll">
                 <table class="steg-table">
                     <thead>
                         <tr>
-                            <th>ID</th>
-                            <th>Libellé</th>
-                            <th>Type d'immobilisation</th>
-                            <th class="btn-action">Actions</th>
+                            <th>ID Local</th>
+                            <th>Type Local</th>
+                            <th>Libellé Local</th>
+                            <th style="text-align: center; width: 100px;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php if (empty($biens)): ?>
+                        <?php if (empty($locaux)): ?>
                             <tr>
-                                <td colspan="4" class="text-center no-data">Aucun bien immobilisé brut référencé pour le moment.</td>
+                                <td colspan="4" class="text-center no-data">Aucun local enregistré.</td>
                             </tr>
                         <?php else: ?>
-                            <?php foreach ($biens as $bien): ?>
+                            <?php foreach ($locaux as $local): ?>
                                 <tr>
-                                    <td class="cell-code"><?= sprintf('%04d', intval($bien['idImmo'])) ?></td>
-                                    <td class="cell-desc"><strong><?= htmlspecialchars($bien['libelle']) ?></strong></td>
-                                    <td><strong><?= htmlspecialchars($bien['typeImmo']) ?></strong></td>
-                                    <td class="btn-action" style="white-space: nowrap; display: flex; align-items: center;">
-                                        <a href="<?= htmlspecialchars($current_page) ?>?edit=<?= urlencode($bien['idImmo']) ?>" class="btn-action edit" title="Modifier" style="color: var(--warning-color); margin-right: 15px; font-size: 1.1rem; text-decoration: none;">
-                                            <i class="fa-solid fa-pen-to-square"></i>
-                                        </a>
-                                        
-                                        <form action="<?= htmlspecialchars($current_page) ?>" method="POST" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer définitivement l\'immobilisation <?= htmlspecialchars(addslashes($bien['libelle'])) ?> ?');" style="margin: 0; padding: 0;">
-                                            <input type="hidden" name="action_delete" value="1">
-                                            <input type="hidden" name="idImmoToDelete" value="<?= intval($bien['idImmo']) ?>">
-                                            <button type="submit" style="background: none; border: none; color: var(--danger-color); font-size: 1.1rem; cursor: pointer; padding: 0;">
-                                                <i class="fa-solid fa-trash-can"></i>
+                                    <td class="cell-id-local"><strong><?= sprintf('%04d', $local['idLocal']) ?></strong></td>
+                                    <td><strong><?= htmlspecialchars($local['typeLocal'], ENT_QUOTES, 'UTF-8') ?></strong></td>
+                                    <td><strong><?= !empty($local['labelLocal']) ? htmlspecialchars($local['labelLocal'], ENT_QUOTES, 'UTF-8') : '<i>Aucun libellé</i>' ?></strong></td>
+                                    <td style="text-align: center;">
+                                        <div style="display: flex; justify-content: center; gap: 12px;">
+                                            <button type="button" title="Modifier" style="background: none; border: none; padding: 0; cursor: pointer;"
+                                                onclick="prepareEdit(<?= $local['idLocal'] ?>, '<?= htmlspecialchars(addslashes($local['typeLocal']), ENT_QUOTES, 'UTF-8') ?>', '<?= htmlspecialchars(addslashes($local['labelLocal']), ENT_QUOTES, 'UTF-8') ?>')">
+                                                <i class="fa-solid fa-pen-to-square" style="color: #ffc107; font-size: 1.1rem;"></i>
                                             </button>
-                                        </form>
+                                            
+                                            <form action="gestion_locaux.php" method="POST" style="display:inline;" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer définitivement le local <?= sprintf('%04d', $local['idLocal']) ?> ?');">
+                                                <input type="hidden" name="action_local" value="delete">
+                                                <input type="hidden" name="idLocal" value="<?= $local['idLocal'] ?>">
+                                                <button type="submit" title="Supprimer" style="background: none; border: none; padding: 0; cursor: pointer;">
+                                                    <i class="fa-solid fa-trash-can" style="color: #dc3545; font-size: 1.1rem;"></i>
+                                                </button>
+                                            </form>
+                                        </div>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>

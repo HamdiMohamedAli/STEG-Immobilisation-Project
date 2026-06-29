@@ -28,7 +28,7 @@ $form_statut  = 1;
 if (isset($_GET['delete'])) {
     $idToDelete = trim($_GET['delete']);
 
-    if (isset($_SESSION['idUtilisateur']) && (int)$idToDelete === (int)$$_SESSION['idUtilisateur']) {
+    if (isset($_SESSION['idUtilisateur']) && (int)$idToDelete === (int)$_SESSION['idUtilisateur']) {
         $errorMsg = "Vous ne pouvez pas supprimer votre propre compte administrateur.";
     } else {
         try {
@@ -94,7 +94,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_user'])) {
                 if ($stmtCheck->fetchColumn() > 0) {
                     $errorMsg = "Cette adresse email est déjà attribuée.";
                 } else {
-                    // Synchronisé avec le SHA2 de MySQL
                     $passwordHash = hash('sha256', $passwordBrut);
                     
                     $pdo->prepare("INSERT INTO users (nom, email, tel, motDePasse, idProfil, idLocalAssigne, statut) VALUES (?, ?, ?, ?, ?, ?, ?)")
@@ -125,7 +124,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_user'])) {
                     $errorMsg = "Cette adresse email est déjà associée à un autre agent.";
                 } else {
                     if (!empty($passwordBrut)) {
-                        // Synchronisé avec le SHA2 de MySQL
                         $passwordHash = hash('sha256', $passwordBrut);
                         $pdo->prepare("UPDATE users SET nom=?, email=?, tel=?, motDePasse=?, idProfil=?, idLocalAssigne=?, statut=? WHERE idUtilisateur=?")
                             ->execute([$nom, $email, $tel, $passwordHash, $profilId, $idLocal, $statut, $idInt]);

@@ -1,6 +1,68 @@
 <?php 
 $idProfil = $_SESSION['idProfil'] ?? null;
+$labelProfil = $_SESSION['labelProfil'] ?? 'Visiteur';
+
+$initiales = "U";
+if (isset($_SESSION['nom']) && !empty(trim($_SESSION['nom']))) {
+    $motsNom = explode(' ', trim($_SESSION['nom']));
+    $premiereLettre = mb_substr($motsNom[0], 0, 1, 'UTF-8');
+    $secondeLettre = (count($motsNom) > 1) ? mb_substr($motsNom[1], 0, 1, 'UTF-8') : '';
+    $initiales = strtoupper($premiereLettre . $secondeLettre);
+}
 ?>
+
+<style>
+    .profile-clickable-link {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        text-decoration: none;
+        color: inherit;
+        padding: 4px 8px;
+        border-radius: 8px;
+        transition: background-color 0.2s ease;
+    }
+    .profile-clickable-link:hover {
+        background-color: rgba(0, 0, 0, 0.05);
+    }
+    .user-info {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .user-name {
+        display: block;
+        font-weight: 600;
+    }
+    .user-role-badge {
+        display: inline-block;
+        font-size: 0.8rem;
+        opacity: 0.8;
+    }
+    .user-avatar-initials {
+        width: 38px;
+        height: 38px;
+        background-color: #0284c7;
+        color: #ffffff;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 0.9rem;
+        letter-spacing: 0.5px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        flex-shrink: 0;
+    }
+    .profile-clickable-link:hover .user-avatar-initials {
+        background-color: #0369a1;
+    }
+    .nav-user-profile {
+        display: flex;
+        align-items: center;
+    }
+</style>
 
 <nav class="main-navbar">
     <div class="nav-brand">
@@ -34,18 +96,24 @@ $idProfil = $_SESSION['idProfil'] ?? null;
     </ul>
 
     <div class="nav-user-profile">
-        <?php if (isset($_SESSION['nom']) || isset($_SESSION['labelProfil'])): ?>
-            <div class="user-info">
-                <span class="user-name">
-                    <?= htmlspecialchars($_SESSION['nom'] ?? '') ?>
-                </span>
+        <?php if (isset($_SESSION['idUtilisateur'])): ?>
+            <a href="user_profile.php" class="profile-clickable-link" title="Voir mon profil">
+                <div class="user-avatar-initials">
+                    <?= htmlspecialchars($initiales, ENT_QUOTES, 'UTF-8') ?>
+                </div>
                 
-                <span class="user-role-badge">
-                    <?= htmlspecialchars(ucfirst($_SESSION['labelProfil'] ?? 'Visiteur')) ?> 
-                    (ID: <?= htmlspecialchars($userIdFormate ?? 'N/A') ?>)
-                </span>
-            </div>
-            <a href="logout.php" class="btn-logout" title="Se déconnecter">
+                <div class="user-info">
+                    <span class="user-name">
+                        <?= htmlspecialchars($_SESSION['nom'] ?? 'Utilisateur', ENT_QUOTES, 'UTF-8') ?>
+                    </span>
+                    
+                    <span class="user-role-badge">
+                        <?= htmlspecialchars($labelProfil, ENT_QUOTES, 'UTF-8') ?>
+                    </span>
+                </div>
+            </a>
+            
+            <a href="logout.php" class="btn-logout" title="Se déconnecter" style="margin-left: 10px;">
                 <i class="fa-solid fa-power-off"></i>
             </a>
         <?php else: ?>

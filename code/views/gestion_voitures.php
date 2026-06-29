@@ -64,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_voiture'])) {
 
     if (!empty($matricule) && !empty($marque) && !empty($statut)) {
         if (!preg_match('/^09-\d{6}$/', $matricule)) {
-            $errorMsg = "Format d'immatriculation invalide. Le format doit être '09-' suivi de 6 chiffres (Ex: 09-123456).";
+            $errorMsg = "Format d'immatriculation invalide. Le format doit être '09-' suivi de 6 chiffres (Ex: 09-475325).";
         } else {
             try {
                 if ($actionType === 'create') {
@@ -88,6 +88,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_voiture'])) {
                                 $matricule
                             ]);
 
+                        if (in_array($statut, ['En Panne', 'Réformé'])) {
+                            $descPanne = "Génération automatique suite à l'enregistrement du véhicule avec le statut : " . $statut;
+                            $graviteAuto = ($statut === 'Réformé') ? 'Critique' : 'Moyenne';
+                            $stmtAutoPanne = $pdo->prepare("INSERT INTO pannes (description, dateDeclaration, gravite, matriculeVoiture, idUtilisateur) VALUES (?, ?, ?, ?, ?)");
+                            $stmtAutoPanne->execute([$descPanne, date('Y-m-d'), $graviteAuto, $matricule, $userId]);
+                        }
+
                         $pdo->commit();
                         $successMsg = "Le véhicule '$marque $modele' a été enregistré avec succès.";
                     }
@@ -105,6 +112,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_voiture'])) {
                             "voitures",
                             $matricule
                         ]);
+
+                    if (in_array($statut, ['En Panne', 'Réformé'])) {
+                        $stmtCheckPanne = $pdo->prepare("SELECT COUNT(*) FROM pannes WHERE matriculeVoiture = ?");
+                        $stmtCheckPanne->execute([$matricule]);
+                        if ($stmtCheckPanne->fetchColumn() == 0) {
+                            $descPanne = "Génération automatique suite au changement de statut du véhicule vers : " . $statut;
+                            $graviteAuto = ($statut === 'Réformé') ? 'Critique' : 'Moyenne';
+                            $stmtAutoPanne = $pdo->prepare("INSERT INTO pannes (description, dateDeclaration, gravite, matriculeVoiture, idUtilisateur) VALUES (?, ?, ?, ?, ?)");
+                            $stmtAutoPanne->execute([$descPanne, date('Y-m-d'), $graviteAuto, $matricule, $userId]);
+                        }
+                    }
 
                     $pdo->commit();
                     $successMsg = "Les informations du véhicule '$matricule' ont été mises à jour.";
@@ -171,8 +189,8 @@ try {
                     <input type="text" id="matricule" name="matricule" required 
                            pattern="^09-\d{6}$" 
                            maxlength="9"
-                           title="L'immatriculation doit être au format '09-' suivi de exactement 6 chiffres (Ex: 09-123456)"
-                           placeholder="Ex: 09-123456" 
+                           title="L'immatriculation doit commencer par '09-' suivi de 6 chiffres (Ex: 09-475325)"
+                           placeholder="Ex: 09-475325" 
                            value="<?= htmlspecialchars($form_matricule) ?>" <?= $isEditMode ? 'readonly style="background-color: #e9ecef; cursor: not-allowed;"' : '' ?>>
                 </div>
 
