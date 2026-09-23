@@ -87,7 +87,7 @@ try {
             </h2>
             <button type="button" id="btnPrintRegister" class="btn-print"
                     style="background-color:#0d6efd;color:white;border:none;padding:8px 16px;border-radius:4px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;">
-                <i class="fa-solid fa-print"></i> Imprimer le registre
+                <i class="fa-solid fa-print"></i> Imprimer
             </button>
         </div>
         <hr style="border:0;height:1px;background:#e2e8f0;margin:15px 0 20px;">

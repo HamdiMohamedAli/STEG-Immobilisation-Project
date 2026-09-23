@@ -1,3 +1,4 @@
+% !TEX root = main.tex
 \documentclass[12pt,a4paper]{report}
 
 \usepackage[utf8]{inputenc}
@@ -23,6 +24,7 @@
 \usepackage[none]{hyphenat}
 \usepackage{enumitem}
 
+% Load your custom styles
 \input{../style/style.tex}
 
 \hypersetup{colorlinks=true,linkcolor=Primary,urlcolor=Primary,citecolor=Primary}
@@ -51,6 +53,7 @@
 \begin{document}
 
 \pagenumbering{arabic}
+\sloppy % Ensures clean line-breaking and full justification across text
 
 \begin{titlepage}
   \input{../sections/title}

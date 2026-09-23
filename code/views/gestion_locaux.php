@@ -178,54 +178,198 @@ try {
             </form>
         </div>
 
-        <div class="locaux-card card-table">
-            <h2><i class="fa-solid fa-map"></i> Cadastre Actif des Locaux</h2>
-            <hr>
-            <div class="table-scroll">
-                <table class="steg-table">
-                    <thead>
-                        <tr>
-                            <th>ID Local</th>
-                            <th>Type Local</th>
-                            <th>Libellé Local</th>
-                            <th style="text-align: center; width: 100px;">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (empty($locaux)): ?>
-                            <tr>
-                                <td colspan="4" class="text-center no-data">Aucun local enregistré.</td>
-                            </tr>
-                        <?php else: ?>
-                            <?php foreach ($locaux as $local): ?>
-                                <tr>
-                                    <td class="cell-id-local"><strong><?= sprintf('%04d', $local['idLocal']) ?></strong></td>
-                                    <td><strong><?= htmlspecialchars($local['typeLocal'], ENT_QUOTES, 'UTF-8') ?></strong></td>
-                                    <td><strong><?= !empty($local['labelLocal']) ? htmlspecialchars($local['labelLocal'], ENT_QUOTES, 'UTF-8') : '<i>Aucun libellé</i>' ?></strong></td>
-                                    <td style="text-align: center;">
-                                        <div style="display: flex; justify-content: center; gap: 12px;">
-                                            <button type="button" title="Modifier" style="background: none; border: none; padding: 0; cursor: pointer;"
-                                                onclick="prepareEdit(<?= $local['idLocal'] ?>, '<?= htmlspecialchars(addslashes($local['typeLocal']), ENT_QUOTES, 'UTF-8') ?>', '<?= htmlspecialchars(addslashes($local['labelLocal']), ENT_QUOTES, 'UTF-8') ?>')">
-                                                <i class="fa-solid fa-pen-to-square" style="color: #ffc107; font-size: 1.1rem;"></i>
-                                            </button>
-                                            
-                                            <form action="gestion_locaux.php" method="POST" style="display:inline;" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer définitivement le local <?= sprintf('%04d', $local['idLocal']) ?> ?');">
-                                                <input type="hidden" name="action_local" value="delete">
-                                                <input type="hidden" name="idLocal" value="<?= $local['idLocal'] ?>">
-                                                <button type="submit" title="Supprimer" style="background: none; border: none; padding: 0; cursor: pointer;">
-                                                    <i class="fa-solid fa-trash-can" style="color: #dc3545; font-size: 1.1rem;"></i>
-                                                </button>
-                                            </form>
-                                        </div>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+<div class="locaux-card card-table">
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+
+        <h2 style="margin:0;">
+            <i class="fa-solid fa-map"></i>
+            Cadastre Actif des Locaux
+
+            <span style="font-size:0.8rem;color:#64748b;font-weight:400;margin-left:8px;">
+                (<?= count($locaux) ?> local<?= count($locaux) > 1 ? 's' : '' ?>)
+            </span>
+        </h2>
+
+        <button
+            type="button"
+            onclick="window.print();"
+            class="btn-print"
+            style="background:#0d6efd;color:white;border:none;padding:6px 14px;border-radius:4px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;"
+        >
+            <i class="fa-solid fa-print"></i> Imprimer
+        </button>
+
     </div>
+
+    <hr>
+
+    <div class="print-header-steg">
+
+        <table style="width:100%;border:none;">
+
+            <tr>
+
+                <td style="border:none !important;text-align:left;padding:0 !important;">
+
+                    <strong>Société Tunisienne de l'Électricité et du Gaz</strong><br>
+
+                    Direction de la Distribution<br>
+
+                    Division Logistique &amp; Approvisionnement
+
+                </td>
+
+                <td style="border:none !important;text-align:right;padding:0 !important;">
+
+                    Date d'édition : <?= date('d/m/Y H:i') ?>
+
+                </td>
+
+            </tr>
+
+        </table>
+
+        <h2 style="text-align:center;margin-top:20px;font-size:18pt;">
+
+            Registre Officiel du Cadastre des Locaux
+
+        </h2>
+
+    </div>
+
+    <div class="table-scroll">
+
+        <table class="steg-table">
+
+            <thead>
+
+                <tr>
+                    <th>ID Local</th>
+                    <th>Type Local</th>
+                    <th>Libellé Local</th>
+                    <th class="btn-action" style="text-align:center;width:100px;">Actions</th>
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+                <?php if (empty($locaux)): ?>
+
+                    <tr>
+
+                        <td colspan="4" class="text-center no-data">
+
+                            Aucun local enregistré.
+
+                        </td>
+
+                    </tr>
+
+                <?php else: ?>
+
+                    <?php foreach ($locaux as $local): ?>
+
+                        <tr>
+
+                            <td class="cell-id-local">
+
+                                <strong>
+                                    <?= sprintf('%04d', $local['idLocal']) ?>
+                                </strong>
+
+                            </td>
+
+                            <td>
+
+                                <strong>
+                                    <?= htmlspecialchars($local['typeLocal'], ENT_QUOTES, 'UTF-8') ?>
+                                </strong>
+
+                            </td>
+
+                            <td>
+
+                                <strong>
+                                    <?= !empty($local['labelLocal'])
+                                        ? htmlspecialchars($local['labelLocal'], ENT_QUOTES, 'UTF-8')
+                                        : '<i>Aucun libellé</i>' ?>
+                                </strong>
+
+                            </td>
+
+                            <td
+                                class="btn-action"
+                                style="text-align:center;white-space:nowrap;"
+                            >
+
+                                <div style="display:flex;justify-content:center;gap:12px;">
+
+                                    <button
+                                        type="button"
+                                        title="Modifier"
+                                        style="background:none;border:none;padding:0;cursor:pointer;"
+                                        onclick="prepareEdit(
+                                            <?= $local['idLocal'] ?>,
+                                            '<?= htmlspecialchars(addslashes($local['typeLocal']), ENT_QUOTES, 'UTF-8') ?>',
+                                            '<?= htmlspecialchars(addslashes($local['labelLocal']), ENT_QUOTES, 'UTF-8') ?>'
+                                        )"
+                                    >
+                                        <i
+                                            class="fa-solid fa-pen-to-square"
+                                            style="color:#ffc107;font-size:1.1rem;"
+                                        ></i>
+                                    </button>
+
+                                    <form
+                                        action="gestion_locaux.php"
+                                        method="POST"
+                                        style="display:inline;"
+                                        onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer définitivement le local <?= sprintf('%04d', $local['idLocal']) ?> ?');"
+                                    >
+
+                                        <input
+                                            type="hidden"
+                                            name="action_local"
+                                            value="delete"
+                                        >
+
+                                        <input
+                                            type="hidden"
+                                            name="idLocal"
+                                            value="<?= $local['idLocal'] ?>"
+                                        >
+
+                                        <button
+                                            type="submit"
+                                            title="Supprimer"
+                                            style="background:none;border:none;padding:0;cursor:pointer;"
+                                        >
+                                            <i
+                                                class="fa-solid fa-trash-can"
+                                                style="color:#dc3545;font-size:1.1rem;"
+                                            ></i>
+                                        </button>
+
+                                    </form>
+
+                                </div>
+
+                            </td>
+
+                        </tr>
+
+                    <?php endforeach; ?>
+
+                <?php endif; ?>
+
+            </tbody>
+
+        </table>
+
+    </div>
+
 </div>
 
 <?php

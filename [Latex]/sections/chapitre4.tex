@@ -22,51 +22,132 @@ L'accès à l'application est protégé par une page de connexion sécurisée qu
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.9\textwidth]{../../assets/logoISIMS.png}
-  \caption{Interface d'authentification sécurisée}
+  \includegraphics[width=0.9\textwidth]{../../assets/Authentification.png}
+  \caption{Interface d'authentification}
   \label{fig:login_page}
 \end{figure}
 
-\subsection{Tableau de Bord Principal}
+\subsection{Tableau de Bord Principal et Modules Associés}
 
-Une fois l'authentification validée, le système affiche un tableau de bord centralisé qui offre une vue d'ensemble sur l'état du patrimoine. Cette page présente des indicateurs de synthèse sur le volume des immobilisations, la répartition des véhicules et les alertes d'inventaire en cours.
+Une fois l'authentification validée, le système affiche un tableau de bord centralisé qui offre une vue d'ensemble sur l'état du patrimoine. Cette page présente des indicateurs de synthèse sur le volume des immobilisations, la répartition des véhicules et les alertes d'inventaire en cours. Depuis ce tableau de bord, l'utilisateur accède aux différents modules fonctionnels de l'application.
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.9\textwidth]{../../assets/logoISIMS.png}
+  \includegraphics[width=0.9\textwidth]{../../assets/Dashboard.png}
   \caption{Tableau de bord de l'application}
   \label{fig:dashboard}
 \end{figure}
 
-\subsection{Module de Gestion des Locaux et du Patrimoine}
+\subsection{Module de Gestion des Utilisateurs}
 
-Cette interface permet de piloter la cartographie physique de la direction. Elle offre des formulaires de saisie et des tableaux de consultation interactifs pour recenser les structures, les directions, les rez-de-chaussée ainsi que les pièces de manière hiérarchique.
+\paragraph{Liste des Personnels}
+Cette vue présente l'annuaire complet des agents enregistrés dans le système. Elle permet de visualiser rapidement les informations de contact, le département d'affectation ainsi que le rôle attribué à chaque utilisateur au sein de la plateforme.
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.9\textwidth]{../../assets/logoISIMS.png}
-  \caption{Interface de suivi des locaux et structures}
+  \includegraphics[width=0.9\textwidth]{../../assets/list_utilisateurs.png}
+  \caption{Interface d'affichage de la liste des personnels}
+  \label{fig:list_utilisateurs}
+\end{figure}
+
+\paragraph{Gestion des Personnels}
+Cette interface administrative est dédiée à la création, à la modification et à la suppression des comptes utilisateurs. Elle permet également d'assigner les différents privilèges d'accès pour sécuriser les actions réalisables selon chaque profil.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\textwidth]{../../assets/gestion_utilisateurs.png}
+  \caption{Interface de gestion et d'administration des personnels}
+  \label{fig:gestion_utilisateurs}
+\end{figure}
+
+\subsection{Module de Gestion des Locaux}
+
+Ce module permet de structurer et d'administrer l'arborescence des différents bâtiments et salles de la structure. Il facilite le rattachement géographique des équipements et du personnel, garantissant ainsi une traçabilité spatiale rigoureuse de l'ensemble du patrimoine immobilier.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\textwidth]{../../assets/gestion_locaux.png}
+  \caption{Interface de gestion des locaux}
   \label{fig:gestion_locaux}
 \end{figure}
 
-\subsection{Module de Suivi du Matériel Électrique}
+\subsection{Module de Gestion des Immobilisations}
 
-Dédiée à la traçabilité des équipements techniques, cette vue permet d'enregistrer le matériel électrique, de modifier son état opérationnel et de mettre à jour sa localisation exacte d'un local à un autre, tout en conservant un historique fiable des mouvements.
+Véritable cœur de l'application, ce module centralise l'inventaire général des biens de l'entreprise. Il permet l'enregistrement, la mise à jour et le suivi des fiches d'immobilisation, facilitant ainsi la gestion des acquisitions et la valorisation globale du patrimoine.
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.9\textwidth]{../../assets/logoISIMS.png}
-  \caption{Interface de gestion du matériel électrique}
+  \includegraphics[width=0.9\textwidth]{../../assets/gestion_immobilisations.png}
+  \caption{Interface de gestion des immobilisations}
+  \label{fig:gestion_immobilisations}
+\end{figure}
+
+\subsection{Module de Suivi des Équipements}
+
+Dédiée à la traçabilité des équipements techniques, cette vue permet d'enregistrer les équipements et de modifier leur état opérationnel, tout en conservant un historique fiable des mouvements.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\textwidth]{../../assets/gestion_equipements.png}
+  \caption{Interface de gestion des équipements}
   \label{fig:gestion_equipements}
 \end{figure}
 
 \subsection{Module de Gestion du Parc Automobile}
 
-Cette section de l'application centralise l'ensemble des informations relatives à la flotte de véhicules de la société. Elle permet le suivi des fiches techniques des voitures, de leur état général ainsi que de leurs directions d'affectation respectives.
+Cette section de l'application centralise l'ensemble des informations relatives à la flotte de véhicules de la société. Il permet le suivi des fiches techniques des voitures, de leur état général ainsi que de leurs directions d'affectation respectives.
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.9\textwidth]{../../assets/logoISIMS.png}
+  \includegraphics[width=0.9\textwidth]{../../assets/gestion_vehicules.png}
   \caption{Interface de suivi du parc roulant}
   \label{fig:gestion_vehicules}
 \end{figure}
+
+\subsection{Module de Gestion des Pannes}
+
+Ce module est indispensable pour le suivi des dysfonctionnements signalés sur le matériel et les véhicules. Il permet de déclarer une nouvelle panne, d'attribuer un niveau de priorité, d'assurer le suivi des interventions de maintenance et de clôturer les tickets une fois la réparation effectuée.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\textwidth]{../../assets/gestion_pannes.png}
+  \caption{Interface de suivi des pannes}
+  \label{fig:gestion_pannes}
+\end{figure}
+
+\subsection{Module de Gestion du Magasin}
+
+Ce module gère les stocks de pièces de rechange et de matériel disponible en réserve. Il permet d'assurer un suivi rigoureux des entrées, des sorties et des seuils d'alerte des articles stockés.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\textwidth]{../../assets/gestion_magasin.png}
+  \caption{Interface de suivi du magasin}
+  \label{fig:gestion_magasin}
+\end{figure}
+
+\subsection{Module de Gestion du Plan}
+
+Cette section permet d'intégrer et de visualiser les plans architecturaux de la structure. Elle facilite la localisation interactive des immobilisations et des équipements directement sur les schémas des différents étages ou bâtiments.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\textwidth]{../../assets/gestion_plan.png}
+  \caption{Interface de suivi du plan}
+  \label{fig:gestion_plan}
+\end{figure}
+
+\subsection{Module de Documentation}
+
+Ce module centralise les guides d'utilisation, les manuels techniques et les historiques d'activité liés au système. Il permet de consulter ou de télécharger rapidement les ressources et journaux nécessaires à la bonne administration de la plateforme.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\textwidth]{../../assets/logs.png}
+  \caption{Interface de gestion de la documentation}
+  \label{fig:logs}
+\end{figure}
+
+\section{Conclusion du Chapitre}
+
+En somme, cette phase de réalisation a permis de concrétiser l'ensemble des choix architecturaux et fonctionnels retenus lors de la conception. À travers le développement des différents modules, l'application offre désormais une solution opérationnelle, ergonomique et sécurisée pour la gestion globale du patrimoine. Le prochain chapitre sera consacré aux tests finaux et à la validation générale du projet.

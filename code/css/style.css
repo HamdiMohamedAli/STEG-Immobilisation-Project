@@ -321,8 +321,15 @@ body { background-color: var(--bg-main); color: var(--text-dark); min-height: 10
 
 .print-header-steg { display: none; }
 
-@media (max-width: 1024px) { .dashboard-grid, .immo-grid, .locaux-grid, .pannes-grid, .users-grid { grid-template-columns: 1fr; } .main-wrapper { flex-direction: column; height: auto; overflow: visible; } .sidebar, .control-sidebar { width: 100%; min-width: 100%; height: auto; }
-}
+@media (max-width: 1024px) { .dashboard-grid, .immo-grid, .locaux-grid, .pannes-grid, .users-grid { grid-template-columns: 1fr; } .main-wrapper { flex-direction: column; height: auto; overflow: visible; } .sidebar, .control-sidebar { width: 100%; min-width: 100%; height: auto; }}
 
-@media print { .users-header, .alert, .card-form, .btn-action, th:last-child, td:last-child, nav, header, footer, #navbar, .btn-print, .zoom-controls { display: none !important; } .users-wrapper, .users-grid, .card-table, .table-scroll { margin: 0 !important; padding: 0 !important; width: 100% !important; box-shadow: none !important; overflow: visible !important; } body { background-color: #fff !important; color: #000 !important; padding: 15mm !important; } .steg-table { width: 100% !important; border-collapse: collapse !important; margin-top: 15px !important; } .steg-table th, .steg-table td { border: 1px solid #000 !important; padding: 8px !important; font-size: 11pt !important; color: #000 !important; } .print-header-steg { display: block !important; margin-bottom: 30px; border-bottom: 2px solid #000; padding-bottom: 10px; } .print-header-steg h2 { margin: 0; font-size: 16pt; }
-}
+@media print { .users-header, .alert, .card-form, .btn-action, th:last-child, td:last-child, nav, header, footer, #navbar, .btn-print, .zoom-controls { display: none !important; } .users-wrapper, .users-grid, .card-table, .table-scroll { margin: 0 !important; padding: 0 !important; width: 100% !important; box-shadow: none !important; overflow: visible !important; } body { background-color: #fff !important; color: #000 !important; padding: 15mm !important; } .steg-table { width: 100% !important; border-collapse: collapse !important; margin-top: 15px !important; } .steg-table th, .steg-table td { border: 1px solid #000 !important; padding: 8px !important; font-size: 11pt !important; color: #000 !important; } .print-header-steg { display: block !important; margin-bottom: 30px; border-bottom: 2px solid #000; padding-bottom: 10px; } .print-header-steg h2 { margin: 0; font-size: 16pt; }}
+
+.print-header-steg { display: none;}
+
+@media print { .users-header, .alert, .btn-action, .btn-print, nav, footer, .main-navbar, th:last-child, td:last-child { display: none !important; }
+ body { background: #fff !important; color: #000 !important; padding: 15mm !important; }
+ .users-wrapper, .users-card, .table-scroll { width: 100% !important; margin: 0 !important; padding: 0 !important; box-shadow: none !important; overflow: visible !important; }
+ .print-header-steg { display: block !important; margin-bottom: 25px; border-bottom: 2px solid #000; padding-bottom: 10px; }
+ .steg-table { width: 100% !important; border-collapse: collapse !important; }
+ .steg-table th, .steg-table td { border: 1px solid #000 !important; padding: 8px !important; color: #000 !important; }}

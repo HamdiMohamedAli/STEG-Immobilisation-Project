@@ -229,8 +229,8 @@ try {
         <div class="immo-card card-table">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <h2><i class="fa-solid fa-list"></i> État de Flotte Active</h2>
-                <button type="button" onclick="window.print();" class="btn btn-primary btn-print" style="padding: 6px 14px;">
-                    <i class="fa-solid fa-print"></i> Imprimer
+                <button type="button" onclick="window.print();" class="btn btn-primary btn-print" style="background-color:#0d6efd;color:white;border:none;padding:8px 16px;border-radius:4px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;">
+                    <i class="fa-solid fa-print"></i> Imprimer 
                 </button>
             </div>
             <hr>

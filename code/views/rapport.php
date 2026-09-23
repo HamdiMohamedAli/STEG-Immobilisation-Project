@@ -2,9 +2,9 @@
 require_once '../includes/header.php';
 require_once '../includes/navbar.php';
 
-$file_path = 'C:\xampp\htdocs\steg_immo\[Latex]\main\main.pdf'; 
+$file_path = 'C:\xampp\htdocs\Official\steg_immo\[Latex]\main\main.pdf'; 
 
-$file_url = '/steg_immo/[Latex]/main/main.pdf'; 
+$file_url = '/Official/steg_immo/[Latex]/main/main.pdf'; 
 ?>
 
 <div class="pdf-container" style="width: 100%; max-width: 1000px; margin: 20px auto;">    

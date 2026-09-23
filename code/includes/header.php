@@ -18,7 +18,7 @@ $userIdFormate = str_pad($_SESSION['idUtilisateur'], 5, '0', STR_PAD_LEFT);
     <title>STEG - Gestion des Immobilisations</title>
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script type="module" src="script.js"></script>
+    <!--<script type="module" src="script.js"></script>-->
 </head>
 <body class="dashboard-body">
 <div class="app-layout">
